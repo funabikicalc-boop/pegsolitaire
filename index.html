@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ペグソリティア</title>
+  <title>Game Center</title>
   <style>
     * {
       margin: 0;
@@ -13,9 +13,9 @@
 
     body {
       font-family: 'Hiragino Kaku Gothic Pro', 'メイリオ', sans-serif;
-      background: linear-gradient(135deg, #2c3e50 0%, #4a6741 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
       min-height: 100vh;
-      padding: 20px;
+      padding: 30px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -23,486 +23,130 @@
 
     h1 {
       color: white;
-      font-size: 1.8rem;
+      font-size: 2rem;
       margin-bottom: 10px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      letter-spacing: 0.1em;
     }
 
-    .info {
-      color: white;
-      text-align: center;
-      margin-bottom: 15px;
-    }
-
-    .info p {
-      margin: 5px 0;
+    .subtitle {
+      color: rgba(255, 255, 255, 0.9);
       font-size: 1rem;
+      margin-bottom: 40px;
     }
 
-    .status {
-      background: rgba(255,255,255,0.2);
-      padding: 8px 20px;
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .game-card {
+      background: rgba(255, 255, 255, 0.95);
       border-radius: 20px;
-      margin: 10px 0;
-      font-size: 1.1rem;
+      padding: 25px;
+      text-decoration: none;
+      color: #333;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: none;
+      cursor: pointer;
+      display: block;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     }
 
-    .board {
-      background: linear-gradient(145deg, #8B4513, #A0522D);
-      padding: 15px;
-      border-radius: 15px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 2px 10px rgba(255,255,255,0.1);
+    .game-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     }
 
-    .row {
-      display: flex;
-      justify-content: center;
-    }
-
-    .cell {
-      width: 44px;
-      height: 44px;
-      margin: 2px;
+    .game-icon {
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
+      margin-bottom: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: transform 0.15s;
+      font-size: 2rem;
     }
 
-    .cell.invalid {
-      background: transparent;
-      cursor: default;
+    .game-card h2 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
     }
 
-    .cell.hole {
-      background: radial-gradient(circle at 30% 30%, #5a3d2b, #3d2817);
-      box-shadow: inset 0 3px 8px rgba(0,0,0,0.6);
-    }
-
-    .cell.peg {
-      background: transparent;
-    }
-
-    .peg-ball {
-      width: 36px;
-      height: 36px;
-      background: radial-gradient(circle at 30% 30%, #6eb5ff, #1e5aa8);
-      border-radius: 50%;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.2);
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-
-    .cell.peg:hover .peg-ball {
-      transform: scale(1.1);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.5);
-    }
-
-    .cell.selected .peg-ball {
-      background: radial-gradient(circle at 30% 30%, #ffeb3b, #f9a825);
-      transform: scale(1.15);
-      box-shadow: 0 0 15px rgba(255,235,59,0.6);
-    }
-
-    .cell.movable {
-      animation: pulse 0.8s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { box-shadow: inset 0 3px 8px rgba(0,0,0,0.6); }
-      50% { box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 0 15px rgba(100,255,100,0.6); }
-    }
-
-    /* 選択モード時のホバー効果 */
-    .selecting .cell.peg:hover .peg-ball {
-      background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b);
-      transform: scale(1.1);
-    }
-
-    .buttons {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-    }
-
-    button {
-      padding: 12px 25px;
-      font-size: 1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
-      color: white;
-    }
-
-    button:active {
-      transform: scale(0.95);
-    }
-
-    .reset-btn {
-      background: linear-gradient(135deg, #e74c3c, #c0392b);
-      box-shadow: 0 4px 10px rgba(231,76,60,0.3);
-    }
-
-    .undo-btn {
-      background: linear-gradient(135deg, #3498db, #2980b9);
-      box-shadow: 0 4px 10px rgba(52,152,219,0.3);
-    }
-
-    .rules {
-      color: white;
-      margin-top: 20px;
-      padding: 15px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 10px;
-      max-width: 350px;
+    .game-card p {
       font-size: 0.9rem;
+      color: #666;
       line-height: 1.6;
     }
 
-    .rules h3 {
-      margin-bottom: 10px;
-      font-size: 1rem;
-    }
-
-    .message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.9);
-      color: white;
-      padding: 30px 40px;
+    .game-card .tag {
+      display: inline-block;
+      padding: 4px 12px;
       border-radius: 20px;
-      text-align: center;
-      display: none;
-      z-index: 100;
+      font-size: 0.75rem;
+      margin-top: 15px;
+      color: white;
     }
 
-    .message.show {
-      display: block;
-      animation: popIn 0.3s ease;
+    /* ペグソリティア用 */
+    .game-card.peg h2 {
+      color: #8B4513;
     }
 
-    @keyframes popIn {
-      0% { transform: translate(-50%, -50%) scale(0); }
-      100% { transform: translate(-50%, -50%) scale(1); }
+    .game-card.peg .game-icon {
+      background: radial-gradient(circle at 30% 30%, #6eb5ff, #1e5aa8);
+      box-shadow: 0 4px 15px rgba(30, 90, 168, 0.4);
     }
 
-    .message h2 {
-      font-size: 1.8rem;
-      margin-bottom: 10px;
+    .game-card.peg .tag {
+      background: linear-gradient(135deg, #8B4513, #A0522D);
     }
 
-    .message p {
-      font-size: 1.1rem;
-      margin-bottom: 20px;
+    /* バブルライン用 */
+    .game-card.bubble h2 {
+      color: #0077aa;
     }
 
-    .message button {
-      background: linear-gradient(135deg, #27ae60, #1e8449);
+    .game-card.bubble .game-icon {
+      background: linear-gradient(135deg, #006994, #003d5c);
+      box-shadow: 0 4px 15px rgba(0, 105, 148, 0.4);
+    }
+
+    .game-card.bubble .tag {
+      background: linear-gradient(135deg, #00a8cc, #006994);
+    }
+
+    .footer {
+      margin-top: 50px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
-  <h1>ペグソリティア</h1>
-  
-  <div class="info">
-    <p class="status" id="statusText">のこり: <span id="pegCount">35</span>個</p>
+  <h1>Game Center</h1>
+  <p class="subtitle">ゲームを選んでね</p>
+
+  <div class="game-grid">
+    <a href="peg-solitaire.html" class="game-card peg">
+      <div class="game-icon"></div>
+      <h2>ペグソリティア</h2>
+      <p>ペグを飛び越えて消していき、最後の1個を目指すパズルゲーム。シンプルだけど奥が深い！</p>
+      <span class="tag">パズル</span>
+    </a>
+
+    <a href="bubble-lines.html" class="game-card bubble">
+      <div class="game-icon">🫧</div>
+      <h2>Bubble Lines</h2>
+      <p>カラフルな泡を5つ並べて消そう！泡がどんどん増えていく中、どこまでスコアを伸ばせるか？</p>
+      <span class="tag">ライン消し</span>
+    </a>
   </div>
 
-  <div class="board" id="board"></div>
-
-  <div class="buttons">
-    <button class="undo-btn" id="undoBtn">1手もどす</button>
-    <button class="reset-btn" id="resetBtn">リセット</button>
-  </div>
-
-  <div class="rules">
-    <h3>あそびかた</h3>
-    ペグをタップして選び、となりのペグを飛びこえて空いた穴に移動します。飛びこえたペグは消えます。最後に1個だけ残せたらクリア！
-  </div>
-
-  <div class="message" id="message">
-    <h2 id="messageTitle"></h2>
-    <p id="messageText"></p>
-    <button id="messageBtn">もういちど</button>
-  </div>
-
-  <script>
-    // 効果音を鳴らす（Web Audio API）
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    function playSound(type) {
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      
-      if (type === 'move') {
-        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.2);
-      } else if (type === 'clear') {
-        oscillator.frequency.setValueAtTime(523, audioCtx.currentTime);
-        oscillator.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);
-        oscillator.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2);
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.4);
-      } else if (type === 'gameover') {
-        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.3);
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.3);
-      } else if (type === 'select') {
-        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.1);
-      }
-    }
-
-    // 盤面の形（1=穴あり、0=穴なし）
-    const boardShape = [
-      [0, 0, 1, 1, 1, 0, 0],
-      [0, 1, 1, 1, 1, 1, 0],
-      [1, 1, 1, 1, 1, 1, 1],
-      [1, 1, 1, 1, 1, 1, 1],
-      [1, 1, 1, 1, 1, 1, 1],
-      [0, 1, 1, 1, 1, 1, 0],
-      [0, 0, 1, 1, 1, 0, 0]
-    ];
-
-    // ゲーム状態
-    let board = [];
-    let selectedCell = null;
-    let moveHistory = [];
-    let isSelectingStart = true;  // 最初の空き位置選択モード
-    const SIZE = 7;
-
-    // 初期化（全部ペグで埋まった状態）
-    function initGame() {
-      board = boardShape.map((row) => 
-        row.map((cell) => {
-          if (cell === 0) return -1;
-          return 1;  // 全部ペグあり
-        })
-      );
-      selectedCell = null;
-      moveHistory = [];
-      isSelectingStart = true;
-      document.getElementById('statusText').innerHTML = '空ける場所をタップしてね';
-      document.getElementById('board').classList.add('selecting');
-      renderBoard();
-    }
-
-    // 盤面描画
-    function renderBoard() {
-      const boardEl = document.getElementById('board');
-      boardEl.innerHTML = '';
-
-      for (let r = 0; r < SIZE; r++) {
-        const rowEl = document.createElement('div');
-        rowEl.className = 'row';
-
-        for (let c = 0; c < SIZE; c++) {
-          const cellEl = document.createElement('div');
-          cellEl.className = 'cell';
-          cellEl.dataset.row = r;
-          cellEl.dataset.col = c;
-
-          if (board[r][c] === -1) {
-            cellEl.classList.add('invalid');
-          } else if (board[r][c] === 0) {
-            cellEl.classList.add('hole');
-            if (selectedCell && isValidMove(selectedCell.r, selectedCell.c, r, c)) {
-              cellEl.classList.add('movable');
-            }
-          } else {
-            cellEl.classList.add('peg');
-            const ball = document.createElement('div');
-            ball.className = 'peg-ball';
-            cellEl.appendChild(ball);
-            if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
-              cellEl.classList.add('selected');
-            }
-          }
-
-          cellEl.addEventListener('click', () => handleClick(r, c));
-          rowEl.appendChild(cellEl);
-        }
-
-        boardEl.appendChild(rowEl);
-      }
-    }
-
-    // クリック処理
-    function handleClick(r, c) {
-      if (board[r][c] === -1) return;
-
-      // 最初の空き位置選択モード
-      if (isSelectingStart) {
-        if (board[r][c] === 1) {
-          board[r][c] = 0;  // 選んだ場所を空きに
-          isSelectingStart = false;
-          document.getElementById('board').classList.remove('selecting');
-          playSound('select');
-          renderBoard();
-          updateCount();
-        }
-        return;
-      }
-
-      // 通常のゲームプレイ
-      if (board[r][c] === 1) {
-        if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
-          selectedCell = null;
-        } else {
-          selectedCell = { r, c };
-        }
-        renderBoard();
-        return;
-      }
-
-      if (board[r][c] === 0 && selectedCell) {
-        if (isValidMove(selectedCell.r, selectedCell.c, r, c)) {
-          makeMove(selectedCell.r, selectedCell.c, r, c);
-          playSound('move');
-          selectedCell = null;
-          renderBoard();
-          updateCount();
-          checkGameEnd();
-        }
-      }
-    }
-
-    // 有効な移動かチェック
-    function isValidMove(fromR, fromC, toR, toC) {
-      const dr = toR - fromR;
-      const dc = toC - fromC;
-
-      if (!((Math.abs(dr) === 2 && dc === 0) || (dr === 0 && Math.abs(dc) === 2))) {
-        return false;
-      }
-
-      if (board[toR][toC] !== 0) return false;
-
-      const midR = fromR + dr / 2;
-      const midC = fromC + dc / 2;
-      if (board[midR][midC] !== 1) return false;
-
-      return true;
-    }
-
-    // 移動実行
-    function makeMove(fromR, fromC, toR, toC) {
-      const midR = fromR + (toR - fromR) / 2;
-      const midC = fromC + (toC - fromC) / 2;
-
-      moveHistory.push({
-        from: { r: fromR, c: fromC },
-        to: { r: toR, c: toC },
-        mid: { r: midR, c: midC }
-      });
-
-      board[fromR][fromC] = 0;
-      board[midR][midC] = 0;
-      board[toR][toC] = 1;
-    }
-
-    // 1手戻す
-    function undoMove() {
-      if (isSelectingStart) return;
-      if (moveHistory.length === 0) return;
-
-      const last = moveHistory.pop();
-      board[last.from.r][last.from.c] = 1;
-      board[last.mid.r][last.mid.c] = 1;
-      board[last.to.r][last.to.c] = 0;
-
-      selectedCell = null;
-      renderBoard();
-      updateCount();
-    }
-
-    // ペグ数更新
-    function updateCount() {
-      let count = 0;
-      for (let r = 0; r < SIZE; r++) {
-        for (let c = 0; c < SIZE; c++) {
-          if (board[r][c] === 1) count++;
-        }
-      }
-      document.getElementById('statusText').innerHTML = `のこり: <span id="pegCount">${count}</span>個`;
-    }
-
-    // ゲーム終了チェック
-    function checkGameEnd() {
-      let pegCount = 0;
-      let canMove = false;
-
-      for (let r = 0; r < SIZE; r++) {
-        for (let c = 0; c < SIZE; c++) {
-          if (board[r][c] === 1) {
-            pegCount++;
-            const directions = [[-2, 0], [2, 0], [0, -2], [0, 2]];
-            for (const [dr, dc] of directions) {
-              const toR = r + dr;
-              const toC = c + dc;
-              if (toR >= 0 && toR < SIZE && toC >= 0 && toC < SIZE) {
-                if (isValidMove(r, c, toR, toC)) {
-                  canMove = true;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (!canMove) {
-        const messageEl = document.getElementById('message');
-        const titleEl = document.getElementById('messageTitle');
-        const textEl = document.getElementById('messageText');
-
-        if (pegCount === 1) {
-          titleEl.textContent = '🎉 パーフェクト！';
-          textEl.textContent = 'すごい！最後の1個になりました！';
-          playSound('clear');
-        } else {
-          titleEl.textContent = 'ゲームオーバー';
-          textEl.textContent = `のこり ${pegCount}個でした`;
-          playSound('gameover');
-        }
-
-        messageEl.classList.add('show');
-      }
-    }
-
-    // イベント設定
-    document.getElementById('resetBtn').addEventListener('click', initGame);
-    document.getElementById('undoBtn').addEventListener('click', undoMove);
-    document.getElementById('messageBtn').addEventListener('click', () => {
-      document.getElementById('message').classList.remove('show');
-      initGame();
-    });
-
-    // ゲーム開始
-    initGame();
-  </script>
+  <p class="footer">Game Center</p>
 </body>
 </html>

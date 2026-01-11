@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Lines</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic Pro', 'メイリオ', sans-serif;
+      background: linear-gradient(180deg, #006994 0%, #003d5c 40%, #001f3f 100%);
+      min-height: 100vh;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 泡の背景アニメーション */
+    .bubble-bg {
+      position: fixed;
+      bottom: -20px;
+      width: 20px;
+      height: 20px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(255,255,255,0.2));
+      border-radius: 50%;
+      animation: rise 8s infinite;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    @keyframes rise {
+      0% { transform: translateY(0) scale(1); opacity: 0.3; }
+      50% { opacity: 0.5; }
+      100% { transform: translateY(-100vh) scale(0.5); opacity: 0; }
+    }
+
+    h1 {
+      color: #7fdbff;
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(127, 219, 255, 0.5);
+      letter-spacing: 0.1em;
+    }
+
+    .info {
+      color: #7fdbff;
+      display: flex;
+      gap: 20px;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    .info span {
+      background: rgba(0, 100, 150, 0.5);
+      padding: 5px 15px;
+      border-radius: 15px;
+      border: 1px solid rgba(127, 219, 255, 0.3);
+    }
+
+    .next-balls {
+      color: #7fdbff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+
+    .next-balls .preview-ball {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .board {
+      background: linear-gradient(180deg, rgba(0, 80, 120, 0.8), rgba(0, 40, 60, 0.9));
+      padding: 8px;
+      border-radius: 15px;
+      box-shadow: 
+        0 10px 40px rgba(0,0,0,0.5),
+        inset 0 0 30px rgba(127, 219, 255, 0.1),
+        0 0 60px rgba(0, 150, 200, 0.2);
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 2px;
+      border: 2px solid rgba(127, 219, 255, 0.2);
+    }
+
+    .cell {
+      width: 32px;
+      height: 32px;
+      background: rgba(0, 50, 80, 0.6);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .cell:hover {
+      background: rgba(0, 80, 120, 0.8);
+    }
+
+    .cell.selected {
+      background: rgba(0, 100, 150, 0.9);
+      box-shadow: 
+        inset 0 2px 4px rgba(0,0,0,0.3),
+        0 0 15px rgba(127, 219, 255, 0.4);
+    }
+
+    .cell.path-highlight {
+      background: rgba(100, 255, 100, 0.3);
+    }
+
+    /* 泡スタイルのボール */
+    .ball {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      transition: transform 0.15s;
+      box-shadow: 
+        inset -3px -3px 8px rgba(0,0,0,0.2),
+        inset 3px 3px 8px rgba(255,255,255,0.4),
+        0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .cell.selected .ball {
+      transform: scale(1.1);
+      animation: wobble 0.8s infinite;
+    }
+
+    @keyframes wobble {
+      0%, 100% { transform: scale(1.1) translateY(0); }
+      25% { transform: scale(1.1) translateY(-2px) rotate(-2deg); }
+      75% { transform: scale(1.1) translateY(-2px) rotate(2deg); }
+    }
+
+    /* 泡の色 - カラフルな海中の宝石イメージ */
+    .ball.red { 
+      background: radial-gradient(circle at 30% 30%, #ff6b6b, #ff0044);
+      box-shadow: 
+        inset -3px -3px 8px rgba(100,0,0,0.3),
+        inset 5px 5px 10px rgba(255,200,200,0.5),
+        0 0 15px rgba(255,0,68,0.3);
+    }
+    .ball.blue { 
+      background: radial-gradient(circle at 30% 30%, #74b9ff, #0066ff);
+      box-shadow: 
+        inset -3px -3px 8px rgba(0,0,100,0.3),
+        inset 5px 5px 10px rgba(200,220,255,0.5),
+        0 0 15px rgba(0,102,255,0.3);
+    }
+    .ball.green { 
+      background: radial-gradient(circle at 30% 30%, #55efc4, #00cc66);
+      box-shadow: 
+        inset -3px -3px 8px rgba(0,80,0,0.3),
+        inset 5px 5px 10px rgba(200,255,220,0.5),
+        0 0 15px rgba(0,204,102,0.3);
+    }
+    .ball.yellow { 
+      background: radial-gradient(circle at 30% 30%, #fff06b, #ffcc00);
+      box-shadow: 
+        inset -3px -3px 8px rgba(100,80,0,0.3),
+        inset 5px 5px 10px rgba(255,255,220,0.5),
+        0 0 15px rgba(255,204,0,0.3);
+    }
+    .ball.purple { 
+      background: radial-gradient(circle at 30% 30%, #d589ff, #aa00ff);
+      box-shadow: 
+        inset -3px -3px 8px rgba(60,0,80,0.3),
+        inset 5px 5px 10px rgba(240,200,255,0.5),
+        0 0 15px rgba(170,0,255,0.3);
+    }
+
+    /* 移動中のボール */
+    .ball.moving {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      transition: left 0.08s linear, top 0.08s linear;
+    }
+
+    /* 水泡が弾けるエフェクト */
+    .ball.removing {
+      animation: bubblePop 0.5s ease-out forwards;
+    }
+
+    @keyframes bubblePop {
+      0% { transform: scale(1); opacity: 1; }
+      30% { transform: scale(1.3); opacity: 0.8; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+
+    /* 弾ける時の小さな泡 */
+    .pop-bubble {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.3));
+      pointer-events: none;
+      z-index: 1001;
+      animation: popFloat 0.8s ease-out forwards;
+    }
+
+    @keyframes popFloat {
+      0% { transform: scale(1) translateY(0); opacity: 1; }
+      100% { transform: scale(0.3) translateY(-40px); opacity: 0; }
+    }
+
+    /* 軌跡エフェクト */
+    .trail {
+      position: fixed;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 999;
+      animation: fadeTrail 0.4s ease-out forwards;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    @keyframes fadeTrail {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(0.2); opacity: 0; }
+    }
+
+    .buttons {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.1s;
+      color: white;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .reset-btn {
+      background: linear-gradient(135deg, #00a8cc, #006994);
+      box-shadow: 0 4px 15px rgba(0, 168, 204, 0.4);
+      border: 1px solid rgba(127, 219, 255, 0.3);
+    }
+
+    .reset-btn:hover {
+      box-shadow: 0 4px 20px rgba(0, 168, 204, 0.6);
+    }
+
+    .message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(180deg, rgba(0, 80, 120, 0.95), rgba(0, 40, 60, 0.98));
+      color: #7fdbff;
+      padding: 30px 40px;
+      border-radius: 20px;
+      text-align: center;
+      display: none;
+      z-index: 100;
+      border: 2px solid rgba(127, 219, 255, 0.3);
+      box-shadow: 0 0 50px rgba(0, 150, 200, 0.3);
+    }
+
+    .message.show {
+      display: block;
+      animation: popIn 0.3s ease;
+    }
+
+    @keyframes popIn {
+      0% { transform: translate(-50%, -50%) scale(0); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .message h2 {
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+      color: #ff6b6b;
+      text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    }
+
+    .message p {
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+    }
+
+    .message button {
+      background: linear-gradient(135deg, #00cc66, #009944);
+      box-shadow: 0 4px 15px rgba(0, 204, 102, 0.4);
+    }
+
+    /* ルールモーダル */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 20, 40, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    .modal {
+      background: linear-gradient(180deg, rgba(0, 80, 120, 0.98), rgba(0, 40, 60, 0.98));
+      color: #7fdbff;
+      padding: 25px 30px;
+      border-radius: 20px;
+      max-width: 360px;
+      width: 90%;
+      border: 2px solid rgba(127, 219, 255, 0.3);
+      box-shadow: 0 0 50px rgba(0, 150, 200, 0.3);
+      animation: popIn 0.3s ease;
+    }
+
+    .modal h2 {
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+      text-align: center;
+      color: #7fdbff;
+      text-shadow: 0 0 10px rgba(127, 219, 255, 0.5);
+    }
+
+    .modal ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px 0;
+    }
+
+    .modal li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(127, 219, 255, 0.15);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .modal li:last-child {
+      border-bottom: none;
+    }
+
+    .modal li::before {
+      content: "🫧 ";
+    }
+
+    .modal .close-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #00a8cc, #006994);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 168, 204, 0.4);
+    }
+
+    .help-btn {
+      background: linear-gradient(135deg, #0088aa, #006688);
+      box-shadow: 0 4px 15px rgba(0, 136, 170, 0.4);
+      border: 1px solid rgba(127, 219, 255, 0.3);
+    }
+
+    .help-btn:hover {
+      box-shadow: 0 4px 20px rgba(0, 136, 170, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景の泡 -->
+  <div class="bubble-bg" style="left: 10%; animation-delay: 0s; width: 15px; height: 15px;"></div>
+  <div class="bubble-bg" style="left: 20%; animation-delay: 2s; width: 25px; height: 25px;"></div>
+  <div class="bubble-bg" style="left: 35%; animation-delay: 4s; width: 18px; height: 18px;"></div>
+  <div class="bubble-bg" style="left: 50%; animation-delay: 1s; width: 22px; height: 22px;"></div>
+  <div class="bubble-bg" style="left: 65%; animation-delay: 3s; width: 16px; height: 16px;"></div>
+  <div class="bubble-bg" style="left: 80%; animation-delay: 5s; width: 20px; height: 20px;"></div>
+  <div class="bubble-bg" style="left: 90%; animation-delay: 2.5s; width: 14px; height: 14px;"></div>
+
+  <h1>🫧 Bubble Lines 🫧</h1>
+  
+  <div class="info">
+    <span>スコア: <strong id="score">0</strong></span>
+    <span>空きマス: <strong id="empty">141</strong></span>
+  </div>
+
+  <div class="next-balls">
+    次に出る玉: 
+    <span id="nextBalls"></span>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="buttons">
+    <button class="help-btn" id="helpBtn">ルール</button>
+    <button class="reset-btn" id="resetBtn">リセット</button>
+  </div>
+
+  <!-- ルール説明モーダル -->
+  <div class="modal-overlay" id="rulesModal">
+    <div class="modal">
+      <h2>🫧 あそびかた 🫧</h2>
+      <ul>
+        <li>泡をタップして選択し、空いているマスをタップして移動</li>
+        <li>移動は空きマスがつながっている場所のみ可能</li>
+        <li>同じ色の泡を縦・横・斜めに5つ以上並べると消える</li>
+        <li>泡を消すとスコアがもらえる</li>
+        <li>毎ターン3つの新しい泡が出現する</li>
+        <li>泡を消したターンは新しい泡が出ない</li>
+        <li>マスが全部埋まるとゲームオーバー</li>
+      </ul>
+      <button class="close-btn" id="closeRulesBtn">OK</button>
+    </div>
+  </div>
+
+  <div class="message" id="message">
+    <h2>ゲームオーバー</h2>
+    <p>スコア: <span id="finalScore">0</span></p>
+    <button id="messageBtn">もういちど</button>
+  </div>
+
+  <script>
+    // ゲーム設定
+    const SIZE = 12;
+    const COLORS = ['red', 'blue', 'green', 'yellow', 'purple'];
+    const BALLS_PER_TURN = 3;
+    const LINE_LENGTH = 5;
+
+    // ゲーム状態
+    let board = [];
+    let selectedCell = null;
+    let score = 0;
+    let nextBalls = [];
+
+    // 効果音
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      if (type === 'move') {
+        // 水中を移動する音
+        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.1);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.15);
+      } else if (type === 'clear') {
+        // 泡が弾ける音（ポコポコ）
+        for (let i = 0; i < 5; i++) {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.setValueAtTime(800 + i * 100, audioCtx.currentTime + i * 0.05);
+          osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + i * 0.05 + 0.1);
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime + i * 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.05 + 0.1);
+          osc.start(audioCtx.currentTime + i * 0.05);
+          osc.stop(audioCtx.currentTime + i * 0.05 + 0.15);
+        }
+        return;
+      } else if (type === 'gameover') {
+        // 深海に沈む音
+        oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.8);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.8);
+      }
+    }
+
+    // 初期化
+    function initGame() {
+      board = Array(SIZE).fill(null).map(() => Array(SIZE).fill(null));
+      selectedCell = null;
+      score = 0;
+      
+      // 次に出るボールを決める
+      nextBalls = generateNextBalls();
+      
+      // 最初のボールを配置
+      addBalls();
+      nextBalls = generateNextBalls();
+      
+      updateDisplay();
+      renderBoard();
+    }
+
+    // 次に出るボールを生成
+    function generateNextBalls() {
+      const balls = [];
+      for (let i = 0; i < BALLS_PER_TURN; i++) {
+        balls.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
+      }
+      return balls;
+    }
+
+    // ボールを追加
+    function addBalls() {
+      const emptyCells = [];
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === null) {
+            emptyCells.push({ r, c });
+          }
+        }
+      }
+
+      // シャッフル
+      for (let i = emptyCells.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
+      }
+
+      // ボールを配置
+      const ballsToAdd = Math.min(nextBalls.length, emptyCells.length);
+      for (let i = 0; i < ballsToAdd; i++) {
+        const cell = emptyCells[i];
+        board[cell.r][cell.c] = nextBalls[i];
+      }
+
+      // 配置後にラインチェック
+      checkAndRemoveLines();
+    }
+
+    // 盤面描画
+    function renderBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+
+          if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
+            cell.classList.add('selected');
+          }
+
+          if (board[r][c]) {
+            const ball = document.createElement('div');
+            ball.className = `ball ${board[r][c]}`;
+            cell.appendChild(ball);
+          }
+
+          cell.addEventListener('click', () => handleClick(r, c));
+          boardEl.appendChild(cell);
+        }
+      }
+
+      // 次のボール表示
+      const nextBallsEl = document.getElementById('nextBalls');
+      nextBallsEl.innerHTML = nextBalls.map(color => 
+        `<span class="preview-ball ball ${color}"></span>`
+      ).join('');
+    }
+
+    // クリック処理
+    function handleClick(r, c) {
+      // ボールがあるセルをクリック
+      if (board[r][c]) {
+        selectedCell = { r, c };
+        renderBoard();
+        return;
+      }
+
+      // 空のセルをクリック（移動先）
+      if (selectedCell && board[r][c] === null) {
+        const path = findPath(selectedCell.r, selectedCell.c, r, c);
+        if (path) {
+          const color = board[selectedCell.r][selectedCell.c];
+          board[selectedCell.r][selectedCell.c] = null;
+          const fromR = selectedCell.r;
+          const fromC = selectedCell.c;
+          selectedCell = null;
+          
+          // 移動アニメーション実行
+          animateMove(fromR, fromC, r, c, color, path);
+        }
+      }
+    }
+
+    // 移動アニメーション
+    function animateMove(fromR, fromC, toR, toC, color, path) {
+      const boardEl = document.getElementById('board');
+      const boardRect = boardEl.getBoundingClientRect();
+      const cellSize = 34; // cell width + gap
+      
+      // 移動するボールを作成
+      const ball = document.createElement('div');
+      ball.className = `ball ${color} moving`;
+      document.body.appendChild(ball);
+      
+      // 全経路（開始地点含む）
+      const fullPath = [{ r: fromR, c: fromC }, ...path];
+      let currentStep = 0;
+      
+      function getCellCenter(r, c) {
+        return {
+          x: boardRect.left + 8 + c * cellSize + cellSize / 2 - 13,
+          y: boardRect.top + 8 + r * cellSize + cellSize / 2 - 13
+        };
+      }
+      
+      // 初期位置
+      const startPos = getCellCenter(fromR, fromC);
+      ball.style.left = startPos.x + 'px';
+      ball.style.top = startPos.y + 'px';
+      
+      renderBoard();
+      
+      function moveStep() {
+        if (currentStep >= fullPath.length - 1) {
+          // アニメーション完了
+          ball.remove();
+          board[toR][toC] = color;
+          playSound('move');
+          
+          renderBoard();
+
+          // ラインチェック
+          const cleared = checkAndRemoveLines();
+          
+          // ラインが消えなかった場合のみ新しいボールを追加
+          if (!cleared) {
+            setTimeout(() => {
+              addBallsWithAnimation();
+            }, 100);
+          } else {
+            updateDisplay();
+            renderBoard();
+            checkGameOver();
+          }
+          return;
+        }
+        
+        currentStep++;
+        const nextCell = fullPath[currentStep];
+        const nextPos = getCellCenter(nextCell.r, nextCell.c);
+        
+        // 軌跡を残す
+        const trail = document.createElement('div');
+        trail.className = `trail ball ${color}`;
+        const currentPos = getCellCenter(fullPath[currentStep - 1].r, fullPath[currentStep - 1].c);
+        trail.style.left = (currentPos.x + 5) + 'px';
+        trail.style.top = (currentPos.y + 5) + 'px';
+        document.body.appendChild(trail);
+        setTimeout(() => trail.remove(), 300);
+        
+        ball.style.left = nextPos.x + 'px';
+        ball.style.top = nextPos.y + 'px';
+        
+        setTimeout(moveStep, 50);
+      }
+      
+      setTimeout(moveStep, 50);
+    }
+
+    // ボール追加（アニメーション付き）
+    function addBallsWithAnimation() {
+      const emptyCells = [];
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === null) {
+            emptyCells.push({ r, c });
+          }
+        }
+      }
+
+      // シャッフル
+      for (let i = emptyCells.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
+      }
+
+      // ボールを配置（アニメーション付き）
+      const ballsToAdd = Math.min(nextBalls.length, emptyCells.length);
+      
+      const boardEl = document.getElementById('board');
+      const boardRect = boardEl.getBoundingClientRect();
+      const cellSize = 34;
+      
+      // 「次に出る玉」の位置を取得
+      const nextBallsEl = document.getElementById('nextBalls');
+      const previewBalls = nextBallsEl.querySelectorAll('.preview-ball');
+      
+      let animationsComplete = 0;
+      
+      for (let i = 0; i < ballsToAdd; i++) {
+        const cell = emptyCells[i];
+        const color = nextBalls[i];
+        
+        // 落下アニメーション用のボールを作成
+        const ball = document.createElement('div');
+        ball.className = `ball ${color} moving`;
+        document.body.appendChild(ball);
+        
+        // 目標位置
+        const targetX = boardRect.left + 8 + cell.c * cellSize + cellSize / 2 - 13;
+        const targetY = boardRect.top + 8 + cell.r * cellSize + cellSize / 2 - 13;
+        
+        // 開始位置（「次に出る玉」のプレビューから）
+        let startX, startY;
+        if (previewBalls[i]) {
+          const previewRect = previewBalls[i].getBoundingClientRect();
+          startX = previewRect.left - 3;
+          startY = previewRect.top - 3;
+        } else {
+          startX = targetX;
+          startY = boardRect.top - 50;
+        }
+        
+        ball.style.left = startX + 'px';
+        ball.style.top = startY + 'px';
+        
+        // 遅延をつけて順番に発射
+        setTimeout(() => {
+          animateFly(ball, startX, startY, targetX, targetY, color, () => {
+            ball.remove();
+            board[cell.r][cell.c] = color;
+            animationsComplete++;
+            
+            // 全部のアニメーションが終わったらチェック
+            if (animationsComplete >= ballsToAdd) {
+              nextBalls = generateNextBalls();
+              setTimeout(() => {
+                checkAndRemoveLines();
+                updateDisplay();
+                renderBoard();
+                checkGameOver();
+              }, 100);
+            }
+          });
+        }, i * 200);
+      }
+      
+      // ボールを追加しなかった場合
+      if (ballsToAdd === 0) {
+        nextBalls = generateNextBalls();
+        updateDisplay();
+        renderBoard();
+        checkGameOver();
+      }
+    }
+    
+    // 飛んでいくアニメーション
+    function animateFly(ball, startX, startY, endX, endY, color, onComplete) {
+      const duration = 350;
+      const startTime = performance.now();
+      const distanceX = endX - startX;
+      const distanceY = endY - startY;
+      
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // イージング（ゆっくり始まってゆっくり終わる）
+        const easeProgress = progress < 0.5 
+          ? 2 * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        
+        const currentX = startX + distanceX * easeProgress;
+        const currentY = startY + distanceY * easeProgress;
+        
+        ball.style.left = currentX + 'px';
+        ball.style.top = currentY + 'px';
+        
+        // 軌跡を残す
+        if (progress < 1 && Math.random() < 0.4) {
+          const trail = document.createElement('div');
+          trail.className = `trail ball ${color}`;
+          trail.style.left = (currentX + 5) + 'px';
+          trail.style.top = (currentY + 5) + 'px';
+          document.body.appendChild(trail);
+          setTimeout(() => trail.remove(), 300);
+        }
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          onComplete();
+        }
+      }
+      
+      requestAnimationFrame(animate);
+    }
+
+    // 経路探索（BFS）
+    function findPath(fromR, fromC, toR, toC) {
+      const visited = Array(SIZE).fill(null).map(() => Array(SIZE).fill(false));
+      const queue = [{ r: fromR, c: fromC, path: [] }];
+      visited[fromR][fromC] = true;
+
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+      while (queue.length > 0) {
+        const current = queue.shift();
+
+        if (current.r === toR && current.c === toC) {
+          return current.path;
+        }
+
+        for (const [dr, dc] of directions) {
+          const nr = current.r + dr;
+          const nc = current.c + dc;
+
+          if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && 
+              !visited[nr][nc] && board[nr][nc] === null) {
+            visited[nr][nc] = true;
+            queue.push({ 
+              r: nr, 
+              c: nc, 
+              path: [...current.path, { r: nr, c: nc }]
+            });
+          }
+        }
+      }
+
+      return null; // 経路なし
+    }
+
+    // ラインチェックと削除
+    function checkAndRemoveLines() {
+      const toRemove = new Set();
+
+      // 全方向チェック
+      const directions = [
+        [0, 1],   // 横
+        [1, 0],   // 縦
+        [1, 1],   // 斜め右下
+        [1, -1]   // 斜め左下
+      ];
+
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (!board[r][c]) continue;
+
+          const color = board[r][c];
+
+          for (const [dr, dc] of directions) {
+            const line = [{ r, c }];
+
+            // 正方向
+            let nr = r + dr;
+            let nc = c + dc;
+            while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === color) {
+              line.push({ r: nr, c: nc });
+              nr += dr;
+              nc += dc;
+            }
+
+            // 逆方向
+            nr = r - dr;
+            nc = c - dc;
+            while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === color) {
+              line.push({ r: nr, c: nc });
+              nr -= dr;
+              nc -= dc;
+            }
+
+            if (line.length >= LINE_LENGTH) {
+              line.forEach(cell => toRemove.add(`${cell.r},${cell.c}`));
+            }
+          }
+        }
+      }
+
+      // 削除（アニメーション付き）
+      if (toRemove.size > 0) {
+        // まずアニメーションを開始
+        const boardEl = document.getElementById('board');
+        const boardRect = boardEl.getBoundingClientRect();
+        const cellSize = 34;
+        
+        toRemove.forEach(key => {
+          const [r, c] = key.split(',').map(Number);
+          const cellIndex = r * SIZE + c;
+          const cell = boardEl.children[cellIndex];
+          const ball = cell.querySelector('.ball');
+          if (ball) {
+            ball.classList.add('removing');
+            
+            // 小さな泡を複数生成
+            const ballRect = ball.getBoundingClientRect();
+            const centerX = ballRect.left + ballRect.width / 2;
+            const centerY = ballRect.top + ballRect.height / 2;
+            
+            for (let i = 0; i < 6; i++) {
+              setTimeout(() => {
+                const bubble = document.createElement('div');
+                bubble.className = 'pop-bubble';
+                const angle = (i / 6) * Math.PI * 2;
+                const distance = 15 + Math.random() * 10;
+                bubble.style.left = (centerX + Math.cos(angle) * distance - 4) + 'px';
+                bubble.style.top = (centerY + Math.sin(angle) * distance - 4) + 'px';
+                document.body.appendChild(bubble);
+                setTimeout(() => bubble.remove(), 800);
+              }, i * 30);
+            }
+          }
+        });
+        
+        // アニメーション後に実際に削除
+        setTimeout(() => {
+          toRemove.forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            board[r][c] = null;
+          });
+          score += toRemove.size * 2;
+          updateDisplay();
+          renderBoard();
+        }, 400);
+        
+        playSound('clear');
+        return true;
+      }
+
+      return false;
+    }
+
+    // 表示更新
+    function updateDisplay() {
+      document.getElementById('score').textContent = score;
+      
+      let empty = 0;
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === null) empty++;
+        }
+      }
+      document.getElementById('empty').textContent = empty;
+    }
+
+    // ゲームオーバーチェック
+    function checkGameOver() {
+      let empty = 0;
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === null) empty++;
+        }
+      }
+
+      if (empty === 0) {
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('message').classList.add('show');
+        playSound('gameover');
+      }
+    }
+
+    // イベント設定
+    document.getElementById('resetBtn').addEventListener('click', initGame);
+    document.getElementById('messageBtn').addEventListener('click', () => {
+      document.getElementById('message').classList.remove('show');
+      initGame();
+    });
+
+    // ルールモーダル
+    document.getElementById('helpBtn').addEventListener('click', () => {
+      document.getElementById('rulesModal').classList.add('show');
+    });
+    document.getElementById('closeRulesBtn').addEventListener('click', () => {
+      document.getElementById('rulesModal').classList.remove('show');
+    });
+    document.getElementById('rulesModal').addEventListener('click', (e) => {
+      if (e.target.id === 'rulesModal') {
+        document.getElementById('rulesModal').classList.remove('show');
+      }
+    });
+
+    // ゲーム開始
+    initGame();
+  </script>
+</body>
+</html>

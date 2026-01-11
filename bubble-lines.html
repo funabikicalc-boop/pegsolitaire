@@ -90,7 +90,7 @@
         inset 0 0 30px rgba(127, 219, 255, 0.1),
         0 0 60px rgba(0, 150, 200, 0.2);
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
+      grid-template-columns: repeat(9, 1fr);
       gap: 2px;
       border: 2px solid rgba(127, 219, 255, 0.2);
     }
@@ -414,7 +414,7 @@
   
   <div class="info">
     <span>スコア: <strong id="score">0</strong></span>
-    <span>空きマス: <strong id="empty">141</strong></span>
+    <span>空きマス: <strong id="empty">78</strong></span>
   </div>
 
   <div class="next-balls">
@@ -454,16 +454,51 @@
 
   <script>
     // ゲーム設定
-    const SIZE = 12;
+    const SIZE = 9;
     const COLORS = ['red', 'blue', 'green', 'yellow', 'purple'];
     const BALLS_PER_TURN = 3;
     const LINE_LENGTH = 5;
+    const SAVE_KEY = 'bubbleLinesSave';
 
     // ゲーム状態
     let board = [];
     let selectedCell = null;
     let score = 0;
     let nextBalls = [];
+
+    // セーブ
+    function saveGame() {
+      const saveData = {
+        board: board,
+        score: score,
+        nextBalls: nextBalls
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    }
+
+    // ロード
+    function loadGame() {
+      const saveData = localStorage.getItem(SAVE_KEY);
+      if (saveData) {
+        try {
+          const data = JSON.parse(saveData);
+          board = data.board;
+          score = data.score;
+          nextBalls = data.nextBalls;
+          updateDisplay();
+          renderBoard();
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    }
+
+    // セーブデータ削除
+    function clearSave() {
+      localStorage.removeItem(SAVE_KEY);
+    }
 
     // 効果音
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -524,6 +559,7 @@
       addBalls();
       nextBalls = generateNextBalls();
       
+      clearSave();
       updateDisplay();
       renderBoard();
     }
@@ -673,6 +709,7 @@
           } else {
             updateDisplay();
             renderBoard();
+            saveGame();
             checkGameOver();
           }
           return;
@@ -771,6 +808,7 @@
                 checkAndRemoveLines();
                 updateDisplay();
                 renderBoard();
+                saveGame();
                 checkGameOver();
               }, 100);
             }
@@ -987,6 +1025,7 @@
       if (empty === 0) {
         document.getElementById('finalScore').textContent = score;
         document.getElementById('message').classList.add('show');
+        clearSave();
         playSound('gameover');
       }
     }
@@ -1012,7 +1051,9 @@
     });
 
     // ゲーム開始
-    initGame();
+    if (!loadGame()) {
+      initGame();
+    }
   </script>
 </body>
 </html>

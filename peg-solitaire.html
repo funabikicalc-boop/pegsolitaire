@@ -298,6 +298,48 @@
     let moveHistory = [];
     let isSelectingStart = true;  // 最初の空き位置選択モード
     const SIZE = 7;
+    const SAVE_KEY = 'pegSolitaireSave';
+
+    // セーブ
+    function saveGame() {
+      const saveData = {
+        board: board,
+        moveHistory: moveHistory,
+        isSelectingStart: isSelectingStart
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    }
+
+    // ロード
+    function loadGame() {
+      const saveData = localStorage.getItem(SAVE_KEY);
+      if (saveData) {
+        try {
+          const data = JSON.parse(saveData);
+          board = data.board;
+          moveHistory = data.moveHistory;
+          isSelectingStart = data.isSelectingStart;
+          
+          if (isSelectingStart) {
+            document.getElementById('statusText').innerHTML = '空ける場所をタップしてね';
+            document.getElementById('board').classList.add('selecting');
+          } else {
+            document.getElementById('board').classList.remove('selecting');
+            updateCount();
+          }
+          renderBoard();
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    }
+
+    // セーブデータ削除
+    function clearSave() {
+      localStorage.removeItem(SAVE_KEY);
+    }
 
     // 初期化（全部ペグで埋まった状態）
     function initGame() {
@@ -312,6 +354,7 @@
       isSelectingStart = true;
       document.getElementById('statusText').innerHTML = '空ける場所をタップしてね';
       document.getElementById('board').classList.add('selecting');
+      clearSave();
       renderBoard();
     }
 
@@ -368,6 +411,7 @@
           playSound('select');
           renderBoard();
           updateCount();
+          saveGame();
         }
         return;
       }
@@ -392,6 +436,7 @@
           selectedCell = null;
           renderBoard();
           updateCount();
+          saveGame();
           checkGameEnd();
         }
       }
@@ -449,6 +494,7 @@
       selectedCell = null;
       renderBoard();
       updateCount();
+      saveGame();
     }
 
     // ペグ数更新
@@ -492,7 +538,7 @@
         const textEl = document.getElementById('messageText');
 
         if (pegCount === 1) {
-          titleEl.textContent = '🎉 パーフェクト！';
+          titleEl.textContent = 'パーフェクト！';
           textEl.textContent = 'すごい！最後の1個になりました！';
           playSound('clear');
         } else {
@@ -501,6 +547,7 @@
           playSound('gameover');
         }
 
+        clearSave();
         messageEl.classList.add('show');
       }
     }
@@ -514,7 +561,9 @@
     });
 
     // ゲーム開始
-    initGame();
+    if (!loadGame()) {
+      initGame();
+    }
   </script>
 </body>
 </html>

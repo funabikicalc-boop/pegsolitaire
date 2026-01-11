@@ -114,6 +114,12 @@
       50% { box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 0 15px rgba(100,255,100,0.6); }
     }
 
+    /* 選択モード時のホバー効果 */
+    .selecting .cell.peg:hover .peg-ball {
+      background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b);
+      transform: scale(1.1);
+    }
+
     .buttons {
       margin-top: 20px;
       display: flex;
@@ -204,7 +210,7 @@
   <h1>ペグソリティア</h1>
   
   <div class="info">
-    <p class="status">のこり: <span id="pegCount">32</span>個</p>
+    <p class="status" id="statusText">のこり: <span id="pegCount">35</span>個</p>
   </div>
 
   <div class="board" id="board"></div>
@@ -264,6 +270,14 @@
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
         oscillator.start(audioCtx.currentTime);
         oscillator.stop(audioCtx.currentTime + 0.3);
+      } else if (type === 'select') {
+        // 選択時の音
+        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.1);
       }
     }
 
@@ -282,21 +296,23 @@
     let board = [];  // 0=穴のみ, 1=ペグあり
     let selectedCell = null;
     let moveHistory = [];
+    let isSelectingStart = true;  // 最初の空き位置選択モード
     const SIZE = 7;
 
-    // 初期化
+    // 初期化（全部ペグで埋まった状態）
     function initGame() {
-      board = boardShape.map((row, r) => 
-        row.map((cell, c) => {
-          if (cell === 0) return -1;  // 無効なセル
-          if (r === 3 && c === 3) return 0;  // 中央は空
-          return 1;  // ペグあり
+      board = boardShape.map((row) => 
+        row.map((cell) => {
+          if (cell === 0) return -1;
+          return 1;  // 全部ペグあり
         })
       );
       selectedCell = null;
       moveHistory = [];
+      isSelectingStart = true;
+      document.getElementById('statusText').innerHTML = '空ける場所をタップしてね';
+      document.getElementById('board').classList.add('selecting');
       renderBoard();
-      updateCount();
     }
 
     // 盤面描画
@@ -343,6 +359,20 @@
     function handleClick(r, c) {
       if (board[r][c] === -1) return;
 
+      // 最初の空き位置選択モード
+      if (isSelectingStart) {
+        if (board[r][c] === 1) {
+          board[r][c] = 0;  // 選んだ場所を空きに
+          isSelectingStart = false;
+          document.getElementById('board').classList.remove('selecting');
+          playSound('select');
+          renderBoard();
+          updateCount();
+        }
+        return;
+      }
+
+      // 通常のゲームプレイ
       // ペグをクリック
       if (board[r][c] === 1) {
         if (selectedCell && selectedCell.r === r && selectedCell.c === c) {
@@ -408,6 +438,7 @@
 
     // 1手戻す
     function undoMove() {
+      if (isSelectingStart) return;
       if (moveHistory.length === 0) return;
 
       const last = moveHistory.pop();
@@ -428,7 +459,7 @@
           if (board[r][c] === 1) count++;
         }
       }
-      document.getElementById('pegCount').textContent = count;
+      document.getElementById('statusText').innerHTML = `のこり: <span id="pegCount">${count}</span>個`;
     }
 
     // ゲーム終了チェック

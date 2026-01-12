@@ -239,18 +239,31 @@
     .buttons {
       margin-top: 15px;
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
+      justify-content: center;
     }
 
     button {
-      padding: 10px 20px;
-      font-size: 0.9rem;
+      padding: 10px 16px;
+      font-size: 0.85rem;
       font-weight: bold;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       transition: transform 0.1s;
       color: white;
+    }
+
+    @media (max-width: 400px) {
+      .buttons {
+        gap: 8px;
+      }
+      
+      button {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+      }
     }
 
     button:active {
@@ -310,6 +323,86 @@
       box-shadow: 0 4px 15px rgba(0, 204, 102, 0.4);
     }
 
+    .score-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+      justify-content: center;
+    }
+
+    .score-form input {
+      padding: 8px 12px;
+      border: 2px solid rgba(127, 219, 255, 0.4);
+      border-radius: 8px;
+      background: rgba(0, 40, 60, 0.8);
+      color: #7fdbff;
+      font-size: 16px;
+      width: 140px;
+      max-width: 100%;
+    }
+
+    .score-form input::placeholder {
+      color: rgba(127, 219, 255, 0.5);
+    }
+
+    .score-form input:focus {
+      outline: none;
+      border-color: rgba(127, 219, 255, 0.8);
+    }
+
+    .submit-btn {
+      background: linear-gradient(135deg, #ff9500, #ff6b00) !important;
+      box-shadow: 0 4px 15px rgba(255, 149, 0, 0.4) !important;
+      padding: 8px 15px !important;
+      font-size: 0.85rem !important;
+      white-space: nowrap;
+    }
+
+    .submit-btn:disabled {
+      background: linear-gradient(135deg, #666, #444) !important;
+      box-shadow: none !important;
+      cursor: not-allowed;
+    }
+
+    .submit-status {
+      font-size: 0.85rem;
+      min-height: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .submit-status.success {
+      color: #55efc4;
+    }
+
+    .submit-status.error {
+      color: #ff6b6b;
+    }
+
+    @media (max-width: 360px) {
+      .message {
+        padding: 20px 15px;
+        width: 95%;
+      }
+      
+      .message h2 {
+        font-size: 1.4rem;
+      }
+      
+      .score-form {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .score-form input {
+        width: 100%;
+      }
+      
+      .submit-btn {
+        width: 100%;
+      }
+    }
+
     /* ルールモーダル */
     .modal-overlay {
       position: fixed;
@@ -341,9 +434,26 @@
       border-radius: 20px;
       max-width: 360px;
       width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
       border: 2px solid rgba(127, 219, 255, 0.3);
       box-shadow: 0 0 50px rgba(0, 150, 200, 0.3);
       animation: popIn 0.3s ease;
+    }
+
+    @media (max-width: 360px) {
+      .modal {
+        padding: 20px 15px;
+        width: 95%;
+      }
+      
+      .modal h2 {
+        font-size: 1.2rem;
+      }
+      
+      .modal li {
+        font-size: 0.85rem;
+      }
     }
 
     .modal h2 {
@@ -398,6 +508,141 @@
     .help-btn:hover {
       box-shadow: 0 4px 20px rgba(0, 136, 170, 0.6);
     }
+
+    .ranking-btn {
+      background: linear-gradient(135deg, #ffd700, #ff9500);
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: #333;
+    }
+
+    .ranking-btn:hover {
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.6);
+    }
+
+    .retire-btn {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+
+    .retire-btn:hover {
+      box-shadow: 0 4px 20px rgba(255, 107, 107, 0.6);
+    }
+
+    .back-btn {
+      background: linear-gradient(135deg, #666, #444);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .back-btn:hover {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .ranking-modal {
+      max-width: 320px;
+    }
+
+    .ranking-content {
+      max-height: 50vh;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    .ranking-content .loading {
+      text-align: center;
+      color: rgba(127, 219, 255, 0.7);
+    }
+
+    .ranking-content .error {
+      text-align: center;
+      color: #ff6b6b;
+    }
+
+    .ranking-content .empty {
+      text-align: center;
+      color: rgba(127, 219, 255, 0.7);
+    }
+
+    .ranking-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .ranking-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(127, 219, 255, 0.15);
+      gap: 8px;
+    }
+
+    .ranking-item:last-child {
+      border-bottom: none;
+    }
+
+    .ranking-rank {
+      font-weight: bold;
+      font-size: 1rem;
+      width: 26px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .ranking-rank.gold { color: #ffd700; }
+    .ranking-rank.silver { color: #c0c0c0; }
+    .ranking-rank.bronze { color: #cd7f32; }
+
+    .ranking-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ranking-name {
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.9rem;
+    }
+
+    .ranking-date {
+      font-size: 0.7rem;
+      color: rgba(127, 219, 255, 0.6);
+    }
+
+    .ranking-score {
+      font-weight: bold;
+      font-size: 1rem;
+      color: #55efc4;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 360px) {
+      .ranking-modal {
+        max-width: 95%;
+      }
+      
+      .ranking-item {
+        padding: 8px 5px;
+        gap: 6px;
+      }
+      
+      .ranking-rank {
+        font-size: 0.9rem;
+        width: 24px;
+      }
+      
+      .ranking-name {
+        font-size: 0.85rem;
+      }
+      
+      .ranking-score {
+        font-size: 0.9rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -425,7 +670,12 @@
   <div class="board" id="board"></div>
 
   <div class="buttons">
+    <button class="back-btn" id="backBtn">← 戻る</button>
     <button class="help-btn" id="helpBtn">ルール</button>
+    <button class="ranking-btn" id="rankingBtn">🏆 ランキング</button>
+  </div>
+  <div class="buttons">
+    <button class="retire-btn" id="retireBtn">リタイア</button>
     <button class="reset-btn" id="resetBtn">リセット</button>
   </div>
 
@@ -446,9 +696,25 @@
     </div>
   </div>
 
+  <!-- ランキングモーダル -->
+  <div class="modal-overlay" id="rankingModal">
+    <div class="modal ranking-modal">
+      <h2>🏆 ランキング 🏆</h2>
+      <div id="rankingContent" class="ranking-content">
+        <p class="loading">読み込み中...</p>
+      </div>
+      <button class="close-btn" id="closeRankingBtn">閉じる</button>
+    </div>
+  </div>
+
   <div class="message" id="message">
     <h2>ゲームオーバー</h2>
     <p>スコア: <span id="finalScore">0</span></p>
+    <div id="scoreForm" class="score-form">
+      <input type="text" id="playerName" placeholder="名前を入力" maxlength="20">
+      <button id="submitScoreBtn" class="submit-btn">スコア登録</button>
+    </div>
+    <p id="submitStatus" class="submit-status"></p>
     <button id="messageBtn">もういちど</button>
   </div>
 
@@ -564,16 +830,106 @@
       renderBoard();
     }
 
-    // 次に出るボールを生成
+    // 意地悪レベルを計算（0〜1の範囲、スコアが上がるほど高くなる）
+    function getMeanLevel() {
+      // スコア0で0%、スコア100で50%、スコア300で80%、スコア500以上で95%
+      const level = Math.min(0.95, score / 500 * 0.95);
+      return level;
+    }
+
+    // 次に出るボールを生成（意地悪版）
     function generateNextBalls() {
       const balls = [];
+      const meanLevel = getMeanLevel();
+      
       for (let i = 0; i < BALLS_PER_TURN; i++) {
-        balls.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
+        if (Math.random() < meanLevel) {
+          // 意地悪モード：盤面で少ない色を選ぶ（揃いにくくなる）
+          const colorCounts = {};
+          COLORS.forEach(c => colorCounts[c] = 0);
+          for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+              if (board[r][c]) colorCounts[board[r][c]]++;
+            }
+          }
+          // 一番少ない色を選ぶ（バラけさせる）
+          const sortedColors = COLORS.slice().sort((a, b) => colorCounts[a] - colorCounts[b]);
+          // 少ない方から2つの色からランダムに選ぶ
+          balls.push(sortedColors[Math.floor(Math.random() * 2)]);
+        } else {
+          // 通常モード：完全ランダム
+          balls.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
+        }
       }
       return balls;
     }
 
-    // ボールを追加
+    // セルのスコアを計算（意地悪配置用）
+    function calculateMeanScore(r, c, color) {
+      let score = 0;
+      const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+      
+      // この位置に置くと何個揃うか確認（邪魔できるか）
+      for (const [dr, dc] of directions) {
+        let sameColorCount = 0;
+        // 正方向
+        let nr = r + dr, nc = c + dc;
+        while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === color) {
+          sameColorCount++;
+          nr += dr;
+          nc += dc;
+        }
+        // 逆方向
+        nr = r - dr;
+        nc = c - dc;
+        while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === color) {
+          sameColorCount++;
+          nr -= dr;
+          nc -= dc;
+        }
+        
+        // 3〜4個揃っている場所には置かない（邪魔になる＝プレイヤーに有利）
+        if (sameColorCount >= 3) {
+          score -= 100;
+        }
+      }
+      
+      // 他の色のラインを邪魔できるかチェック
+      for (const otherColor of COLORS) {
+        if (otherColor === color) continue;
+        for (const [dr, dc] of directions) {
+          let lineCount = 0;
+          // 正方向
+          let nr = r + dr, nc = c + dc;
+          while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === otherColor) {
+            lineCount++;
+            nr += dr;
+            nc += dc;
+          }
+          // 逆方向
+          nr = r - dr;
+          nc = c - dc;
+          while (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === otherColor) {
+            lineCount++;
+            nr -= dr;
+            nc -= dc;
+          }
+          
+          // 2〜4個揃っている場所に別の色を置く＝ブロック！
+          if (lineCount >= 2 && lineCount < 5) {
+            score += lineCount * 10;
+          }
+        }
+      }
+      
+      // 経路を塞ぐ位置を優先（中央付近）
+      const centerDist = Math.abs(r - 4) + Math.abs(c - 4);
+      score += (8 - centerDist) * 2;
+      
+      return score;
+    }
+
+    // ボールを追加（意地悪配置版）
     function addBalls() {
       const emptyCells = [];
       for (let r = 0; r < SIZE; r++) {
@@ -584,17 +940,36 @@
         }
       }
 
-      // シャッフル
-      for (let i = emptyCells.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
-      }
-
+      const meanLevel = getMeanLevel();
+      
       // ボールを配置
       const ballsToAdd = Math.min(nextBalls.length, emptyCells.length);
+      const usedCells = new Set();
+      
       for (let i = 0; i < ballsToAdd; i++) {
-        const cell = emptyCells[i];
-        board[cell.r][cell.c] = nextBalls[i];
+        const color = nextBalls[i];
+        let chosenCell;
+        
+        if (Math.random() < meanLevel && emptyCells.length > 3) {
+          // 意地悪モード：スコアが高い位置を選ぶ
+          const availableCells = emptyCells.filter(cell => !usedCells.has(`${cell.r},${cell.c}`));
+          const scoredCells = availableCells.map(cell => ({
+            ...cell,
+            score: calculateMeanScore(cell.r, cell.c, color) + Math.random() * 5
+          }));
+          scoredCells.sort((a, b) => b.score - a.score);
+          
+          // 上位3つからランダムに選ぶ（少し予測不能に）
+          const topN = Math.min(3, scoredCells.length);
+          chosenCell = scoredCells[Math.floor(Math.random() * topN)];
+        } else {
+          // 通常モード：ランダム
+          const availableCells = emptyCells.filter(cell => !usedCells.has(`${cell.r},${cell.c}`));
+          chosenCell = availableCells[Math.floor(Math.random() * availableCells.length)];
+        }
+        
+        usedCells.add(`${chosenCell.r},${chosenCell.c}`);
+        board[chosenCell.r][chosenCell.c] = color;
       }
 
       // 配置後にラインチェック
@@ -737,7 +1112,7 @@
       setTimeout(moveStep, 50);
     }
 
-    // ボール追加（アニメーション付き）
+    // ボール追加（アニメーション付き・意地悪配置版）
     function addBallsWithAnimation() {
       const emptyCells = [];
       for (let r = 0; r < SIZE; r++) {
@@ -748,14 +1123,37 @@
         }
       }
 
-      // シャッフル
-      for (let i = emptyCells.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [emptyCells[i], emptyCells[j]] = [emptyCells[j], emptyCells[i]];
-      }
-
-      // ボールを配置（アニメーション付き）
+      const meanLevel = getMeanLevel();
+      
+      // ボールを配置（意地悪配置）
       const ballsToAdd = Math.min(nextBalls.length, emptyCells.length);
+      const usedCells = new Set();
+      const placementCells = [];
+      
+      for (let i = 0; i < ballsToAdd; i++) {
+        const color = nextBalls[i];
+        let chosenCell;
+        
+        if (Math.random() < meanLevel && emptyCells.length > 3) {
+          // 意地悪モード
+          const availableCells = emptyCells.filter(cell => !usedCells.has(`${cell.r},${cell.c}`));
+          const scoredCells = availableCells.map(cell => ({
+            ...cell,
+            score: calculateMeanScore(cell.r, cell.c, color) + Math.random() * 5
+          }));
+          scoredCells.sort((a, b) => b.score - a.score);
+          
+          const topN = Math.min(3, scoredCells.length);
+          chosenCell = scoredCells[Math.floor(Math.random() * topN)];
+        } else {
+          // 通常モード
+          const availableCells = emptyCells.filter(cell => !usedCells.has(`${cell.r},${cell.c}`));
+          chosenCell = availableCells[Math.floor(Math.random() * availableCells.length)];
+        }
+        
+        usedCells.add(`${chosenCell.r},${chosenCell.c}`);
+        placementCells.push({ ...chosenCell, color });
+      }
       
       const boardEl = document.getElementById('board');
       const boardRect = boardEl.getBoundingClientRect();
@@ -767,9 +1165,9 @@
       
       let animationsComplete = 0;
       
-      for (let i = 0; i < ballsToAdd; i++) {
-        const cell = emptyCells[i];
-        const color = nextBalls[i];
+      for (let i = 0; i < placementCells.length; i++) {
+        const cell = placementCells[i];
+        const color = cell.color;
         
         // 落下アニメーション用のボールを作成
         const ball = document.createElement('div');
@@ -802,7 +1200,7 @@
             animationsComplete++;
             
             // 全部のアニメーションが終わったらチェック
-            if (animationsComplete >= ballsToAdd) {
+            if (animationsComplete >= placementCells.length) {
               nextBalls = generateNextBalls();
               setTimeout(() => {
                 checkAndRemoveLines();
@@ -817,7 +1215,7 @@
       }
       
       // ボールを追加しなかった場合
-      if (ballsToAdd === 0) {
+      if (placementCells.length === 0) {
         nextBalls = generateNextBalls();
         updateDisplay();
         renderBoard();
@@ -1024,6 +1422,7 @@
 
       if (empty === 0) {
         document.getElementById('finalScore').textContent = score;
+        resetScoreForm();
         document.getElementById('message').classList.add('show');
         clearSave();
         playSound('gameover');
@@ -1031,10 +1430,96 @@
     }
 
     // イベント設定
+    document.getElementById('backBtn').addEventListener('click', () => {
+      // セーブしてから戻る
+      saveGame();
+      window.location.href = 'index.html';
+    });
     document.getElementById('resetBtn').addEventListener('click', initGame);
+    document.getElementById('retireBtn').addEventListener('click', () => {
+      if (score === 0) {
+        alert('まだゲームが始まっていません');
+        return;
+      }
+      if (confirm('リタイアしますか？')) {
+        forceGameOver();
+      }
+    });
     document.getElementById('messageBtn').addEventListener('click', () => {
       document.getElementById('message').classList.remove('show');
       initGame();
+    });
+
+    // 強制ゲームオーバー（リタイア用）
+    function forceGameOver() {
+      document.getElementById('finalScore').textContent = score;
+      resetScoreForm();
+      document.getElementById('message').classList.add('show');
+      clearSave();
+      playSound('gameover');
+    }
+
+    // スコア登録
+    // ※ここにGASのWebアプリURLを設定してください
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwU84QkVDt02rRjoeYFhh7MjOstgiC-fsoGVn0CSab6kYWHV7rSMcghOyExSwt3RoGk/exec';
+
+    document.getElementById('submitScoreBtn').addEventListener('click', async () => {
+      const nameInput = document.getElementById('playerName');
+      const submitBtn = document.getElementById('submitScoreBtn');
+      const statusEl = document.getElementById('submitStatus');
+      const playerName = nameInput.value.trim();
+      
+      if (!playerName) {
+        statusEl.textContent = '名前を入力してください';
+        statusEl.className = 'submit-status error';
+        return;
+      }
+      
+      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL') {
+        statusEl.textContent = 'GAS URLが設定されていません';
+        statusEl.className = 'submit-status error';
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      statusEl.textContent = '送信中...';
+      statusEl.className = 'submit-status';
+      
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `name=${encodeURIComponent(playerName)}&score=${score}`
+        });
+        
+        statusEl.textContent = '登録しました！';
+        statusEl.className = 'submit-status success';
+        nameInput.disabled = true;
+      } catch (error) {
+        statusEl.textContent = '登録に失敗しました';
+        statusEl.className = 'submit-status error';
+        submitBtn.disabled = false;
+      }
+    });
+
+    // ゲームオーバー時にフォームをリセット
+    function resetScoreForm() {
+      const nameInput = document.getElementById('playerName');
+      const submitBtn = document.getElementById('submitScoreBtn');
+      const statusEl = document.getElementById('submitStatus');
+      nameInput.value = localStorage.getItem('bubbleLinesPlayerName') || '';
+      nameInput.disabled = false;
+      submitBtn.disabled = false;
+      statusEl.textContent = '';
+      statusEl.className = 'submit-status';
+    }
+
+    // 名前を保存
+    document.getElementById('playerName').addEventListener('change', (e) => {
+      localStorage.setItem('bubbleLinesPlayerName', e.target.value);
     });
 
     // ルールモーダル
@@ -1050,10 +1535,114 @@
       }
     });
 
+    // ランキングモーダル
+    document.getElementById('rankingBtn').addEventListener('click', () => {
+      document.getElementById('rankingModal').classList.add('show');
+      loadRanking();
+    });
+    document.getElementById('closeRankingBtn').addEventListener('click', () => {
+      document.getElementById('rankingModal').classList.remove('show');
+    });
+    document.getElementById('rankingModal').addEventListener('click', (e) => {
+      if (e.target.id === 'rankingModal') {
+        document.getElementById('rankingModal').classList.remove('show');
+      }
+    });
+
+    // ランキング読み込み
+    async function loadRanking() {
+      const contentEl = document.getElementById('rankingContent');
+      contentEl.innerHTML = '<p class="loading">読み込み中...</p>';
+      
+      if (GAS_URL === 'YOUR_GAS_WEB_APP_URL') {
+        contentEl.innerHTML = '<p class="error">GAS URLが設定されていません</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(GAS_URL);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message);
+        }
+        
+        if (data.ranking.length === 0) {
+          contentEl.innerHTML = '<p class="empty">まだスコアが登録されていません</p>';
+          return;
+        }
+        
+        const listHtml = data.ranking.map((item, index) => {
+          const rankClass = index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : '';
+          const rankIcon = index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+          const dateStr = formatDate(item.date);
+          
+          return `
+            <li class="ranking-item">
+              <span class="ranking-rank ${rankClass}">${rankIcon}</span>
+              <div class="ranking-info">
+                <div class="ranking-name">${escapeHtml(item.name)}</div>
+                <div class="ranking-date">${dateStr}</div>
+              </div>
+              <span class="ranking-score">${item.score}</span>
+            </li>
+          `;
+        }).join('');
+        
+        contentEl.innerHTML = `<ul class="ranking-list">${listHtml}</ul>`;
+        
+      } catch (error) {
+        contentEl.innerHTML = '<p class="error">読み込みに失敗しました</p>';
+      }
+    }
+
+    // 日付フォーマット
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      
+      // 既に yyyy/MM/dd 形式の場合
+      if (dateStr.match(/^\d{4}\/\d{2}\/\d{2}/)) {
+        return dateStr.split(' ')[0];
+      }
+      
+      // ISO形式（2026-01-12T06:06:33.000Z）の場合
+      try {
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          const y = date.getFullYear();
+          const m = String(date.getMonth() + 1).padStart(2, '0');
+          const d = String(date.getDate()).padStart(2, '0');
+          return `${y}/${m}/${d}`;
+        }
+      } catch (e) {}
+      
+      // その他の形式はそのまま返す
+      return dateStr.split('T')[0] || dateStr;
+    }
+
+    // HTMLエスケープ
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     // ゲーム開始
     if (!loadGame()) {
       initGame();
     }
+
+    // ページを離れる時に自動保存
+    window.addEventListener('beforeunload', () => {
+      saveGame();
+    });
+    
+    // visibilitychange でも保存（モバイル対応）
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        saveGame();
+      }
+    });
   </script>
 </body>
 </html>

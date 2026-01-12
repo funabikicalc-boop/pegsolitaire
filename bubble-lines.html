@@ -294,6 +294,23 @@
       z-index: 100;
       border: 2px solid rgba(127, 219, 255, 0.3);
       box-shadow: 0 0 50px rgba(0, 150, 200, 0.3);
+      width: 90%;
+      max-width: 340px;
+    }
+
+    @media (max-width: 400px) {
+      .message {
+        padding: 20px 15px;
+        width: 92%;
+      }
+      
+      .message h2 {
+        font-size: 1.4rem;
+      }
+      
+      .message p {
+        font-size: 1rem;
+      }
     }
 
     .message.show {

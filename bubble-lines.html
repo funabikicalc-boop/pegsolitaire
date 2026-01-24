@@ -754,7 +754,8 @@
       const saveData = {
         board: board,
         score: score,
-        nextBalls: nextBalls
+        nextBalls: nextBalls,
+        turnCount: turnCount
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
     }
@@ -768,6 +769,7 @@
           board = data.board;
           score = data.score;
           nextBalls = data.nextBalls;
+          turnCount = data.turnCount || 0;
           updateDisplay();
           renderBoard();
           return true;
@@ -834,6 +836,7 @@
       board = Array(SIZE).fill(null).map(() => Array(SIZE).fill(null));
       selectedCell = null;
       score = 0;
+      turnCount = 0;
       
       // 次に出るボールを決める
       nextBalls = generateNextBalls();
@@ -847,10 +850,23 @@
       renderBoard();
     }
 
-    // 意地悪レベルを計算（0〜1の範囲、スコアが上がるほど高くなる）
+    // ターン数（波の計算用）
+    let turnCount = 0;
+
+    // 意地悪レベルを計算（波のある難易度）
     function getMeanLevel() {
-      // スコア0で0%、スコア100で50%、スコア300で80%、スコア500以上で95%
-      const level = Math.min(0.95, score / 500 * 0.95);
+      // ベースレベル: スコアに応じてゆるやかに上昇（0〜0.6）
+      const baseLevel = Math.min(0.6, score / 600 * 0.6);
+      
+      // 波: サイン波で±0.25の変動（周期は約15ターン）
+      const wave = Math.sin(turnCount * 0.4) * 0.25;
+      
+      // ランダム要素: ±0.1の揺らぎ
+      const randomFactor = (Math.random() - 0.5) * 0.2;
+      
+      // 合計（0〜0.9の範囲にクランプ）
+      const level = Math.max(0, Math.min(0.9, baseLevel + wave + randomFactor));
+      
       return level;
     }
 
@@ -1218,6 +1234,7 @@
             
             // 全部のアニメーションが終わったらチェック
             if (animationsComplete >= placementCells.length) {
+              turnCount++;
               nextBalls = generateNextBalls();
               setTimeout(() => {
                 checkAndRemoveLines();
@@ -1478,7 +1495,7 @@
 
     // スコア登録
     // ※ここにGASのWebアプリURLを設定してください
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbwU84QkVDt02rRjoeYFhh7MjOstgiC-fsoGVn0CSab6kYWHV7rSMcghOyExSwt3RoGk/exec';
+    const GAS_URL = 'YOUR_GAS_WEB_APP_URL';
 
     document.getElementById('submitScoreBtn').addEventListener('click', async () => {
       const nameInput = document.getElementById('playerName');

@@ -388,6 +388,12 @@
       margin-bottom: 10px;
     }
 
+    .score-note {
+      font-size: 0.75rem;
+      color: rgba(127, 219, 255, 0.6);
+      margin-bottom: 8px;
+    }
+
     .submit-status.success {
       color: #55efc4;
     }
@@ -731,6 +737,7 @@
       <input type="text" id="playerName" placeholder="名前を入力" maxlength="20">
       <button id="submitScoreBtn" class="submit-btn">スコア登録</button>
     </div>
+    <p class="score-note">※同じ名前は自己ベストのみ記録されます</p>
     <p id="submitStatus" class="submit-status"></p>
     <button id="messageBtn">もういちど</button>
   </div>

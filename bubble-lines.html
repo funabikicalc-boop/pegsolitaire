@@ -860,19 +860,30 @@
     // ターン数（波の計算用）
     let turnCount = 0;
 
-    // 意地悪レベルを計算（波のある難易度）
+    // 意地悪レベルを計算（波のある難易度 + 休憩ゾーン）
     function getMeanLevel() {
-      // ベースレベル: スコアに応じてゆるやかに上昇（0〜0.6）
-      const baseLevel = Math.min(0.6, score / 600 * 0.6);
+      // ベースレベル: スコアに応じてゆるやかに上昇（0〜0.5）
+      // 1200点で最大に到達するよう調整
+      const baseLevel = Math.min(0.5, score / 1200 * 0.5);
       
-      // 波: サイン波で±0.25の変動（周期は約15ターン）
-      const wave = Math.sin(turnCount * 0.4) * 0.25;
+      // 波: サイン波で±0.2の変動（周期は約15ターン）
+      const turnWave = Math.sin(turnCount * 0.4) * 0.2;
+      
+      // 休憩ゾーン: 100点ごとに難易度が下がる「谷」を作る
+      // スコアの下2桁が0-30の範囲で難易度ダウン
+      const scoreInCycle = score % 100;
+      let restBonus = 0;
+      if (scoreInCycle < 30) {
+        // 0〜30点の間は「休憩ゾーン」: 最大-0.25の難易度軽減
+        // 15点で最も楽になり、0と30で通常に戻る
+        restBonus = -0.25 * Math.sin((scoreInCycle / 30) * Math.PI);
+      }
       
       // ランダム要素: ±0.1の揺らぎ
       const randomFactor = (Math.random() - 0.5) * 0.2;
       
-      // 合計（0〜0.9の範囲にクランプ）
-      const level = Math.max(0, Math.min(0.9, baseLevel + wave + randomFactor));
+      // 合計（0〜0.7の範囲にクランプ）← 天井を下げた
+      const level = Math.max(0, Math.min(0.7, baseLevel + turnWave + restBonus + randomFactor));
       
       return level;
     }

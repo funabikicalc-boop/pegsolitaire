@@ -2,170 +2,474 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#120626">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Game Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@600;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="arcade.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    html {
+      background: #120626;
     }
 
     body {
-      font-family: 'Hiragino Kaku Gothic Pro', 'メイリオ', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
       min-height: 100vh;
-      padding: 30px 20px;
+      min-height: 100dvh;
+      padding: max(20px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
       align-items: center;
     }
 
-    h1 {
-      color: white;
-      font-size: 2rem;
-      margin-bottom: 10px;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      letter-spacing: 0.1em;
+    /* ===== 夜のアーケードホール ===== */
+    .hall {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 40% at 20% 0%, rgba(255, 60, 180, 0.35), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 0%, rgba(60, 200, 255, 0.3), transparent 70%),
+        linear-gradient(180deg, #120626 0%, #1d0b3a 55%, #2a0c3f 100%);
     }
 
-    .subtitle {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 1rem;
-      margin-bottom: 40px;
+    /* 天井のスポットライト */
+    .spot {
+      position: absolute;
+      top: -10%;
+      width: 40vw;
+      max-width: 320px;
+      height: 80%;
+      background: linear-gradient(180deg, rgba(255, 240, 200, 0.22), transparent 80%);
+      clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+      will-change: opacity;
+      animation: spot 6s ease-in-out infinite alternate;
     }
 
-    .game-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 25px;
-      max-width: 800px;
+    .spot.s1 { left: -5%; transform: rotate(-18deg); }
+    .spot.s2 { right: -5%; transform: rotate(18deg); animation-delay: -3s; }
+
+    @keyframes spot {
+      from { opacity: 0.4; }
+      to { opacity: 1; }
+    }
+
+    /* ネオンの床 */
+    .floor {
+      position: absolute;
+      left: -50%;
+      right: -50%;
+      bottom: -10%;
+      height: 55%;
+      background:
+        linear-gradient(90deg, rgba(255, 80, 200, 0.5) 1px, transparent 1px) 0 0 / 60px 60px,
+        linear-gradient(0deg, rgba(80, 220, 255, 0.45) 1px, transparent 1px) 0 0 / 60px 60px;
+      transform: perspective(300px) rotateX(60deg);
+      transform-origin: bottom center;
+      -webkit-mask: linear-gradient(0deg, #000 30%, transparent 95%);
+      mask: linear-gradient(0deg, #000 30%, transparent 95%);
+    }
+
+    /* ===== 電飾つき看板 ===== */
+    .sign {
+      position: relative;
       width: 100%;
+      max-width: 440px;
+      padding: 14px;
+      border-radius: 26px;
+      background: var(--gold-metal);
+      box-shadow: 0 0 0 2px #3a2400, 0 0 40px rgba(255, 120, 220, 0.45), 0 18px 40px rgba(0, 0, 0, 0.6);
+      margin-bottom: 26px;
     }
 
-    @media (max-width: 640px) {
-      .game-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-      }
-
-      h1 {
-        font-size: 1.6rem;
-      }
-
-      .game-card {
-        padding: 20px;
-      }
-
-      .game-card h2 {
-        font-size: 1.2rem;
-      }
+    .sign-inner {
+      position: relative;
+      border-radius: 16px;
+      padding: 22px 12px 18px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 90, 200, 0.35), transparent 70%),
+        linear-gradient(180deg, #2b0f4f, #12052a);
+      box-shadow: inset 0 0 0 2px #3a2400, inset 0 6px 20px rgba(0, 0, 0, 0.6);
+      text-align: center;
     }
 
-    .game-card {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 20px;
-      padding: 25px;
-      text-decoration: none;
-      color: #333;
-      transition: transform 0.3s, box-shadow 0.3s;
-      border: none;
-      cursor: pointer;
+    .sign .logo-title { font-size: clamp(32px, 11vw, 48px); }
+
+    .sign .logo-sub {
+      background: linear-gradient(180deg, #ff3d9a, #a3086a);
+    }
+
+    .neon {
+      margin-top: 12px;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      letter-spacing: 0.3em;
+      color: #c9f7ff;
+      text-shadow: 0 0 4px #5ff3ff, 0 0 12px #2ad1ff, 0 0 24px #2ad1ff;
+      animation: flicker 4s steps(1) infinite;
+    }
+
+    @keyframes flicker {
+      0%, 92%, 96%, 100% { opacity: 1; }
+      94% { opacity: 0.35; }
+    }
+
+    /* ===== ゲームの筐体カード ===== */
+    .cabinets {
+      width: 100%;
+      max-width: 920px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+      gap: 22px;
+      justify-items: center;
+    }
+
+    .cabinet {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
       display: block;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      text-decoration: none;
+      color: var(--text);
+      border: 3px solid transparent;
+      border-radius: 24px;
+      background: var(--panel) padding-box, var(--gold-metal) border-box;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 0 30px var(--glow);
+      overflow: hidden;
+      transition: transform 0.15s;
     }
 
-    .game-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    .cabinet:active { transform: scale(0.98); }
+
+    @media (hover: hover) {
+      .cabinet:hover { transform: translateY(-4px); }
     }
 
-    .game-icon {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      margin-bottom: 15px;
+    .cabinet.bubble { --glow: rgba(60, 200, 255, 0.35); --top: linear-gradient(180deg, #1aa6c9, #0b4f7a); }
+    .cabinet.peg { --glow: rgba(255, 160, 60, 0.35); --top: linear-gradient(180deg, #e0703a, #6b2350); }
+    .cabinet.soon { --glow: rgba(255, 80, 200, 0.25); --top: linear-gradient(180deg, #7a3bd0, #3a1470); }
+
+    /* 筐体の上の看板 */
+    .cab-top {
+      position: relative;
+      padding: 12px 14px 10px;
+      background: var(--top);
+      text-align: center;
+      border-bottom: 3px solid #3a2400;
+    }
+
+    .cab-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      line-height: 1.1;
+      background: var(--gold-text);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 1px #5a3200;
+      filter: drop-shadow(0 2px 0 #3a1f00);
+      padding-bottom: 0.12em;
+    }
+
+    .cab-sub {
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      color: #fff3c4;
+    }
+
+    /* つづきから */
+    .badge {
+      position: absolute;
+      top: 10px;
+      right: -34px;
+      width: 130px;
+      padding: 3px 0;
+      transform: rotate(35deg);
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.72rem;
+      text-align: center;
+      color: #4a2600;
+      background: linear-gradient(180deg, #fff1a8, #f2b705);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      display: none;
+    }
+
+    .cabinet.has-save .badge { display: block; }
+
+    /* 画面（世界観のミニ絵） */
+    .cab-screen {
+      margin: 14px 14px 0;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      box-shadow: inset 0 0 0 2px #3a2400, 0 0 0 3px rgba(255, 233, 168, 0.25);
+    }
+
+    .cab-screen svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .cab-body {
+      padding: 12px 16px 18px;
+    }
+
+    .cab-desc {
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: rgba(255, 248, 231, 0.85);
+      margin-bottom: 10px;
+    }
+
+    .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      padding: 2px 10px 3px;
+      border-radius: 999px;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.72rem;
+      color: var(--gold-light);
+      border: 1px solid rgba(255, 215, 120, 0.5);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .cab-play {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      gap: 10px;
+      width: 100%;
     }
 
-    .game-card h2 {
-      font-size: 1.4rem;
-      margin-bottom: 10px;
-    }
+    .cab-play svg { width: 18px; height: 18px; }
 
-    .game-card p {
-      font-size: 0.9rem;
-      color: #666;
-      line-height: 1.6;
-    }
+    .soon .cab-screen { filter: saturate(0.7); }
 
-    .game-card .tag {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      margin-top: 15px;
-      color: white;
-    }
-
-    /* ペグソリティア用 */
-    .game-card.peg h2 {
-      color: #8B4513;
-    }
-
-    .game-card.peg .game-icon {
-      background: radial-gradient(circle at 30% 30%, #6eb5ff, #1e5aa8);
-      box-shadow: 0 4px 15px rgba(30, 90, 168, 0.4);
-    }
-
-    .game-card.peg .tag {
-      background: linear-gradient(135deg, #8B4513, #A0522D);
-    }
-
-    /* バブルライン用 */
-    .game-card.bubble h2 {
-      color: #0077aa;
-    }
-
-    .game-card.bubble .game-icon {
-      background: linear-gradient(135deg, #006994, #003d5c);
-      box-shadow: 0 4px 15px rgba(0, 105, 148, 0.4);
-    }
-
-    .game-card.bubble .tag {
-      background: linear-gradient(135deg, #00a8cc, #006994);
+    .soon-label {
+      display: block;
+      height: 50px;
+      line-height: 46px;
+      text-align: center;
+      border-radius: 999px;
+      border: 2px dashed rgba(255, 233, 168, 0.4);
+      font-family: var(--font-display);
+      letter-spacing: 0.2em;
+      color: rgba(255, 233, 168, 0.6);
     }
 
     .footer {
-      margin-top: 50px;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 0.85rem;
+      margin-top: 30px;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      color: rgba(255, 248, 231, 0.4);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .spot, .neon { animation: none; }
     }
   </style>
 </head>
 <body>
-  <h1>Game Center</h1>
-  <p class="subtitle">ゲームを選んでね</p>
-
-  <div class="game-grid">
-    <a href="peg-solitaire.html" class="game-card peg">
-      <div class="game-icon"></div>
-      <h2>ペグソリティア</h2>
-      <p>ペグを飛び越えて消していき、最後の1個を目指すパズルゲーム。シンプルだけど奥が深い！</p>
-      <span class="tag">パズル</span>
-    </a>
-
-    <a href="bubble-lines.html" class="game-card bubble">
-      <div class="game-icon">🫧</div>
-      <h2>Bubble Lines</h2>
-      <p>カラフルな泡を5つ並べて消そう！泡がどんどん増えていく中、どこまでスコアを伸ばせるか？</p>
-      <span class="tag">ライン消し</span>
-    </a>
+  <div class="hall" aria-hidden="true">
+    <div class="spot s1"></div>
+    <div class="spot s2"></div>
+    <div class="floor"></div>
   </div>
 
-  <p class="footer">Game Center</p>
+  <header class="sign">
+    <div class="lights" id="signLights"></div>
+    <span class="corner-pearl"></span>
+    <span class="corner-pearl"></span>
+    <span class="corner-pearl"></span>
+    <span class="corner-pearl"></span>
+    <div class="sign-inner">
+      <div class="logo">
+        <div class="logo-title">GAME CENTER</div>
+        <div class="logo-sub">あそびたい台を選んでね</div>
+      </div>
+      <div class="neon">OPEN 24H</div>
+    </div>
+  </header>
+
+  <main class="cabinets">
+    <a href="bubble-lines.html" class="cabinet bubble" data-save="bubbleLinesSave">
+      <div class="cab-top">
+        <div class="cab-title">Bubble Lines</div>
+        <div class="cab-sub">竜宮城の宝玉</div>
+        <span class="badge">つづきから</span>
+      </div>
+      <div class="cab-screen">
+        <svg viewBox="0 0 320 180" aria-hidden="true">
+          <defs>
+            <linearGradient id="seaBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#36c9d6"/>
+              <stop offset="0.45" stop-color="#0b6d93"/>
+              <stop offset="1" stop-color="#03132b"/>
+            </linearGradient>
+            <radialGradient id="bRed" cx="0.35" cy="0.3"><stop offset="0" stop-color="#ffc2cf"/><stop offset="0.45" stop-color="#ff3d68"/><stop offset="1" stop-color="#9e0730"/></radialGradient>
+            <radialGradient id="bBlue" cx="0.35" cy="0.3"><stop offset="0" stop-color="#c4e3ff"/><stop offset="0.45" stop-color="#2f86ff"/><stop offset="1" stop-color="#0b2f80"/></radialGradient>
+            <radialGradient id="bGreen" cx="0.35" cy="0.3"><stop offset="0" stop-color="#c6ffe0"/><stop offset="0.45" stop-color="#19d36b"/><stop offset="1" stop-color="#06612f"/></radialGradient>
+            <radialGradient id="bYellow" cx="0.35" cy="0.3"><stop offset="0" stop-color="#fff6c2"/><stop offset="0.45" stop-color="#ffc21a"/><stop offset="1" stop-color="#a35a00"/></radialGradient>
+            <radialGradient id="bPurple" cx="0.35" cy="0.3"><stop offset="0" stop-color="#f0d4ff"/><stop offset="0.45" stop-color="#b04dff"/><stop offset="1" stop-color="#4f0f8f"/></radialGradient>
+            <radialGradient id="pGlowS"><stop offset="0" stop-color="#ffe7a0" stop-opacity="0.9"/><stop offset="1" stop-color="#ff9ec8" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#seaBg)"/>
+          <g fill="rgba(210,255,255,0.18)">
+            <path d="M40 0 L80 0 L50 180 L10 180 Z"/><path d="M150 0 L175 0 L165 180 L130 180 Z"/><path d="M240 0 L280 0 L300 180 L250 180 Z"/>
+          </g>
+          <ellipse cx="160" cy="70" rx="110" ry="60" fill="url(#pGlowS)"/>
+          <!-- 竜宮城 -->
+          <g transform="translate(110 22) scale(0.25)">
+            <rect x="64" y="142" width="74" height="34" fill="#d42b2b"/>
+            <rect x="262" y="142" width="74" height="34" fill="#d42b2b"/>
+            <path d="M52 144 Q64 142 72 136 L100 123 L128 136 Q136 142 148 144 Z" fill="#2fbfae" stroke="#f5c542" stroke-width="2"/>
+            <path d="M252 144 Q264 142 272 136 L300 123 L328 136 Q336 142 348 144 Z" fill="#2fbfae" stroke="#f5c542" stroke-width="2"/>
+            <rect x="150" y="126" width="100" height="50" fill="#d42b2b"/>
+            <path d="M132 130 Q148 128 158 120 L200 107 L242 120 Q252 128 268 130 Z" fill="#2fbfae" stroke="#f5c542" stroke-width="2"/>
+            <rect x="166" y="90" width="68" height="22" fill="#d42b2b"/>
+            <path d="M152 94 Q166 92 174 86 L200 74 L226 86 Q234 92 248 94 Z" fill="#2fbfae" stroke="#f5c542" stroke-width="2"/>
+            <rect x="180" y="58" width="40" height="18" fill="#d42b2b"/>
+            <path d="M168 60 Q178 58 184 52 L200 42 L216 52 Q222 58 232 60 Z" fill="#2fbfae" stroke="#f5c542" stroke-width="2"/>
+            <circle cx="200" cy="30" r="9" fill="#fff"/>
+            <path d="M36 176 L364 176 L376 192 L24 192 Z" fill="#33557a"/>
+          </g>
+          <!-- 5つ並んで消える泡 -->
+          <g>
+            <circle cx="70" cy="140" r="15" fill="url(#bPurple)"/>
+            <circle cx="115" cy="140" r="15" fill="url(#bPurple)"/>
+            <circle cx="160" cy="140" r="15" fill="url(#bPurple)"/>
+            <circle cx="205" cy="140" r="15" fill="url(#bPurple)"/>
+            <circle cx="250" cy="140" r="15" fill="url(#bPurple)"/>
+            <circle cx="40" cy="105" r="11" fill="url(#bRed)"/>
+            <circle cx="282" cy="100" r="11" fill="url(#bYellow)"/>
+            <circle cx="30" cy="160" r="9" fill="url(#bBlue)"/>
+            <circle cx="292" cy="158" r="10" fill="url(#bGreen)"/>
+          </g>
+          <g fill="rgba(255,255,255,0.85)">
+            <ellipse cx="65" cy="134" rx="5" ry="3"/><ellipse cx="110" cy="134" rx="5" ry="3"/><ellipse cx="155" cy="134" rx="5" ry="3"/><ellipse cx="200" cy="134" rx="5" ry="3"/><ellipse cx="245" cy="134" rx="5" ry="3"/>
+          </g>
+        </svg>
+      </div>
+      <div class="cab-body">
+        <p class="cab-desc">海の底の竜宮城で、同じ色の泡を5つ並べて消そう！続けて消すと「竜宮フィーバー」が起きるかも？</p>
+        <div class="tags"><span class="tag">ライン消し</span><span class="tag">ランキングあり</span></div>
+        <span class="slot-btn blue cab-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+          PLAY
+        </span>
+      </div>
+    </a>
+
+    <a href="peg-solitaire.html" class="cabinet peg" data-save="pegSolitaireSave">
+      <div class="cab-top">
+        <div class="cab-title">Peg Solitaire</div>
+        <div class="cab-sub">ピラミッドの秘宝</div>
+        <span class="badge">つづきから</span>
+      </div>
+      <div class="cab-screen">
+        <svg viewBox="0 0 320 180" aria-hidden="true">
+          <defs>
+            <linearGradient id="duskBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#2a0f48"/>
+              <stop offset="0.45" stop-color="#8a2f5a"/>
+              <stop offset="0.75" stop-color="#e0703a"/>
+              <stop offset="1" stop-color="#f6b453"/>
+            </linearGradient>
+            <radialGradient id="sunS"><stop offset="0" stop-color="#fff3c4"/><stop offset="0.4" stop-color="#ffc24a" stop-opacity="0.8"/><stop offset="1" stop-color="#ff7a3a" stop-opacity="0"/></radialGradient>
+            <radialGradient id="gold" cx="0.35" cy="0.3"><stop offset="0" stop-color="#fffbe0"/><stop offset="0.4" stop-color="#ffd34d"/><stop offset="0.75" stop-color="#c98a00"/><stop offset="1" stop-color="#7a4a00"/></radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#duskBg)"/>
+          <g fill="#fff"><circle cx="30" cy="20" r="1"/><circle cx="90" cy="35" r="1.2"/><circle cx="250" cy="18" r="1"/><circle cx="295" cy="40" r="1.2"/><circle cx="180" cy="12" r="1"/></g>
+          <circle cx="160" cy="95" r="80" fill="url(#sunS)"/>
+          <path d="M20 150 L80 95 L140 150 Z" fill="#d9923f"/><path d="M80 95 L140 150 L100 150 Z" fill="#8a4a1f"/>
+          <path d="M180 150 L245 90 L305 150 Z" fill="#d9923f"/><path d="M245 90 L305 150 L265 150 Z" fill="#8a4a1f"/>
+          <path d="M90 155 L160 50 L230 155 Z" fill="#ffd98a"/><path d="M160 50 L230 155 L182 155 Z" fill="#b8702e"/>
+          <path d="M152 62 L160 50 L168 62 Z" fill="#fff1a8"/>
+          <path d="M0 150 Q160 140 320 150 L320 180 L0 180 Z" fill="#7a3b1c"/>
+          <!-- 宝玉 -->
+          <g>
+            <circle cx="40" cy="165" r="9" fill="url(#gold)"/><circle cx="64" cy="165" r="9" fill="url(#gold)"/>
+            <circle cx="256" cy="165" r="9" fill="url(#gold)"/><circle cx="280" cy="165" r="9" fill="url(#gold)"/>
+            <circle cx="160" cy="165" r="10" fill="#5ff3ea"/>
+          </g>
+        </svg>
+      </div>
+      <div class="cab-body">
+        <p class="cab-desc">黄金の宝玉を飛びこえて消していき、最後の1個を目指すパズル。シンプルだけど奥が深い！</p>
+        <div class="tags"><span class="tag">パズル</span><span class="tag">じっくり派</span></div>
+        <span class="slot-btn red cab-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+          PLAY
+        </span>
+      </div>
+    </a>
+
+    <div class="cabinet soon" aria-label="準備中の新しいゲーム">
+      <div class="cab-top">
+        <div class="cab-title">NEW GAME</div>
+        <div class="cab-sub">新しい台を準備中</div>
+      </div>
+      <div class="cab-screen">
+        <svg viewBox="0 0 320 180" aria-hidden="true">
+          <defs>
+            <linearGradient id="craneBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#3a1470"/>
+              <stop offset="1" stop-color="#12052a"/>
+            </linearGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#craneBg)"/>
+          <!-- クレーン -->
+          <rect x="40" y="16" width="240" height="6" rx="3" fill="#c9a3ff"/>
+          <rect x="150" y="12" width="20" height="14" rx="3" fill="#ffe066"/>
+          <path d="M160 26 L160 70" stroke="#e6e6ff" stroke-width="3"/>
+          <rect x="148" y="68" width="24" height="10" rx="3" fill="#ffe066"/>
+          <path d="M150 78 Q136 92 142 108 M170 78 Q184 92 178 108 M160 78 L160 104" stroke="#ffe066" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <!-- 景品 -->
+          <g>
+            <circle cx="70" cy="150" r="18" fill="#ff6fb5"/><circle cx="64" cy="146" r="2.5" fill="#3a1470"/><circle cx="76" cy="146" r="2.5" fill="#3a1470"/>
+            <circle cx="110" cy="158" r="16" fill="#5ff3ff"/><circle cx="105" cy="154" r="2.3" fill="#3a1470"/><circle cx="115" cy="154" r="2.3" fill="#3a1470"/>
+            <circle cx="210" cy="156" r="17" fill="#ffe066"/><circle cx="204" cy="152" r="2.4" fill="#3a1470"/><circle cx="216" cy="152" r="2.4" fill="#3a1470"/>
+            <circle cx="252" cy="150" r="18" fill="#9dffb8"/><circle cx="246" cy="146" r="2.5" fill="#3a1470"/><circle cx="258" cy="146" r="2.5" fill="#3a1470"/>
+          </g>
+          <text x="160" y="140" text-anchor="middle" font-family="Dela Gothic One, sans-serif" font-size="30" fill="#fff" opacity="0.92" style="paint-order: stroke" stroke="#ff3d9a" stroke-width="4">?</text>
+        </svg>
+      </div>
+      <div class="cab-body">
+        <p class="cab-desc">次はどんな台が入荷するかな？おたのしみに！</p>
+        <span class="soon-label">COMING SOON</span>
+      </div>
+    </div>
+  </main>
+
+  <p class="footer">GAME CENTER</p>
+
+  <script src="arcade.js"></script>
+  <script>
+    Arcade.buildLights(document.getElementById('signLights'), 14);
+
+    // 途中のセーブがあるゲームに「つづきから」を出す
+    document.querySelectorAll('.cabinet[data-save]').forEach((el) => {
+      try {
+        if (localStorage.getItem(el.dataset.save)) el.classList.add('has-save');
+      } catch (e) {}
+    });
+  </script>
 </body>
 </html>

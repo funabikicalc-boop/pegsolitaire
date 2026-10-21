@@ -9,18 +9,10 @@
   <title>Bubble Lines</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@600;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="arcade.css">
   <style>
     :root {
-      --text: #fff8e7;
-      --text-dim: rgba(255, 248, 231, 0.65);
-      --gold-light: #ffe9a8;
-      --gold: #f5c542;
-      --gold-dark: #6b4500;
-      --gold-metal: linear-gradient(160deg, #fff6cc 0%, #f2c94c 22%, #a8740a 45%, #ffe58a 62%, #c8961a 80%, #7a5200 100%);
-      --panel: linear-gradient(180deg, rgba(8, 30, 66, 0.92), rgba(3, 14, 36, 0.95));
-      --danger: #ff3b5c;
-      --gutter: 10px;
       /* 上パネル（竜宮城）の高さ */
       --stage: clamp(100px, 20vh, 220px);
       /* 盤面と下のボタンの間の余白（背の高い画面ほど広く） */
@@ -37,26 +29,14 @@
       }
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
     html, body {
       height: 100%;
       background: #03132b;
     }
 
     body {
-      font-family: 'Outfit', 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
-      color: var(--text);
       overflow: hidden;
       overscroll-behavior: none;
-      touch-action: manipulation;
-      user-select: none;
-      -webkit-user-select: none;
     }
 
     /* ===== 海の背景 ===== */
@@ -204,62 +184,12 @@
       100% { transform: translateY(-6px) rotate(3deg); }
     }
 
-    .logo {
-      position: relative;
-      text-align: center;
-      line-height: 1;
-    }
-
-    .logo-title {
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: clamp(30px, 10vw, 44px);
-      letter-spacing: 0.02em;
-      background: linear-gradient(180deg, #fffbe6 0%, #ffe066 35%, #e0a10e 55%, #fff1a8 75%, #c8860a 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      -webkit-text-stroke: 1.5px #5a3200;
-      filter: drop-shadow(0 3px 0 #3a1f00) drop-shadow(0 0 14px rgba(255, 190, 60, 0.7));
-    }
-
     /* 背の低い画面ではロゴを小さくして竜宮城の絵を残す */
     @media (max-height: 720px) {
       .stage-art { height: calc(100% - 48px); }
       .logo-title { font-size: clamp(26px, 8.5vw, 34px); }
     }
 
-    .logo-sub {
-      display: inline-block;
-      margin-top: 4px;
-      padding: 3px 14px;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 0.72rem;
-      letter-spacing: 0.2em;
-      color: #ffe9a8;
-      background: linear-gradient(180deg, #e8243c, #9b0b22);
-      border: 1px solid #ffd76b;
-      border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    }
-
-    .icon-btn {
-      position: absolute;
-      top: 0;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 215, 120, 0.8);
-      background: rgba(3, 20, 48, 0.75);
-      color: var(--gold-light);
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      box-shadow: 0 0 12px rgba(255, 200, 80, 0.3);
-      z-index: 2;
-    }
-
-    .icon-btn:active { transform: scale(0.9); }
-    .icon-btn svg { width: 20px; height: 20px; }
     #backBtn { left: 0; }
     #helpBtn { right: 50px; }
     #rankingBtn { right: 0; }
@@ -293,13 +223,6 @@
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-    }
-
-    .label {
-      font-size: 0.62rem;
-      font-weight: 800;
-      letter-spacing: 0.16em;
-      color: var(--gold);
     }
 
     .score-value {
@@ -372,109 +295,6 @@
     .ball.preview-ball {
       width: 24px;
       height: 24px;
-    }
-
-    /* ===== 盤面（金枠＋電飾） ===== */
-    .frame {
-      position: relative;
-      flex-shrink: 0;
-      width: var(--frame);
-      height: var(--frame);
-      padding: 12px;
-      border-radius: 24px;
-      background: var(--gold-metal);
-      box-shadow:
-        0 0 0 2px #3a2400,
-        0 0 28px rgba(255, 190, 60, 0.45),
-        0 18px 40px rgba(0, 0, 0, 0.6);
-      transition: box-shadow 0.4s;
-    }
-
-    .lights {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .led {
-      position: absolute;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      background: #7a5200;
-    }
-
-    .led::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 0 4px 1px var(--led), 0 0 10px 3px var(--led);
-      opacity: 0;
-      will-change: opacity;
-      animation: chase 1.6s linear infinite;
-      animation-delay: var(--d);
-    }
-
-    @keyframes chase {
-      0%, 35% { opacity: 1; }
-      36%, 100% { opacity: 0; }
-    }
-
-    .frame.fever {
-      box-shadow:
-        0 0 0 2px #3a2400,
-        0 0 50px rgba(255, 110, 200, 0.9),
-        0 0 90px rgba(255, 220, 80, 0.6);
-    }
-
-    .frame.fever .led::after { animation-duration: 0.35s; }
-
-    .frame.danger {
-      box-shadow:
-        0 0 0 2px #3a0000,
-        0 0 30px rgba(255, 40, 70, 0.7),
-        0 18px 40px rgba(0, 0, 0, 0.6);
-    }
-
-    .frame.danger .led { background: #5a0010; }
-
-    .frame.danger .led::after {
-      --led: #ff2a4a;
-      background: #ff8a9b;
-      animation: dangerBlink 0.7s steps(2) infinite;
-    }
-
-    @keyframes dangerBlink {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .corner-pearl {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe3f1 40%, #c9a3c9 100%);
-      box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
-    }
-
-    .corner-pearl:nth-of-type(1) { top: 3px; left: 3px; }
-    .corner-pearl:nth-of-type(2) { top: 3px; right: 3px; }
-    .corner-pearl:nth-of-type(3) { bottom: 3px; left: 3px; }
-    .corner-pearl:nth-of-type(4) { bottom: 3px; right: 3px; }
-
-    .crest {
-      position: absolute;
-      top: -17px;
-      left: 50%;
-      width: 52px;
-      transform: translateX(-50%);
-      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
-      pointer-events: none;
-      z-index: 3;
     }
 
     .board {
@@ -598,150 +418,6 @@
       100% { transform: scale(1.5) translateY(-30px); opacity: 0; }
     }
 
-    /* ===== 消去時の演出 ===== */
-    .score-pop {
-      position: fixed;
-      z-index: 1003;
-      pointer-events: none;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 1.5rem;
-      color: #fff3c4;
-      -webkit-text-stroke: 1px #6b3a00;
-      text-shadow: 0 0 12px rgba(255, 200, 60, 0.9);
-      transform: translate(-50%, -50%);
-      animation: scorePop 1s ease-out forwards;
-    }
-
-    @keyframes scorePop {
-      0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); }
-      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-      100% { opacity: 0; transform: translate(-50%, -170%) scale(1); }
-    }
-
-    .fx-banner {
-      position: fixed;
-      z-index: 1002;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .burst {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 340px;
-      height: 340px;
-      margin: -170px 0 0 -170px;
-      border-radius: 50%;
-      background: repeating-conic-gradient(rgba(255, 230, 130, 0.55) 0deg 8deg, transparent 8deg 20deg);
-      -webkit-mask: radial-gradient(circle, #000 15%, transparent 68%);
-      mask: radial-gradient(circle, #000 15%, transparent 68%);
-      animation: burst 1.2s ease-out forwards;
-    }
-
-    @keyframes burst {
-      0% { transform: scale(0.2) rotate(0deg); opacity: 0; }
-      20% { opacity: 1; }
-      100% { transform: scale(1.3) rotate(60deg); opacity: 0; }
-    }
-
-    .fx-text {
-      position: relative;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 3rem;
-      white-space: nowrap;
-      background: linear-gradient(180deg, #fffbe6 0%, #ffe066 40%, #e0a10e 60%, #fff1a8 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      -webkit-text-stroke: 2px #5a2a00;
-      filter: drop-shadow(0 4px 0 #3a1500) drop-shadow(0 0 16px rgba(255, 180, 40, 0.9));
-      animation: cutIn 1.2s cubic-bezier(.2,1.4,.4,1) forwards;
-    }
-
-    .fx-sub {
-      position: relative;
-      margin-top: 4px;
-      padding: 2px 14px;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 1.1rem;
-      color: #fff;
-      background: linear-gradient(180deg, #ff4d7a, #c0063a);
-      border: 2px solid #ffe066;
-      border-radius: 6px;
-      animation: cutIn 1.2s cubic-bezier(.2,1.4,.4,1) 0.08s backwards, fadeOut 1.2s forwards;
-    }
-
-    @keyframes cutIn {
-      0% { transform: scale(2.6); opacity: 0; }
-      18% { transform: scale(1); opacity: 1; }
-      75% { transform: scale(1); opacity: 1; }
-      100% { transform: scale(1.1); opacity: 0; }
-    }
-
-    @keyframes fadeOut {
-      75% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    .fx-banner.fever .fx-text {
-      font-size: 2.3rem;
-      background: linear-gradient(90deg, #ff6fb5, #ffe066, #5ff3ff, #b47bff, #ff6fb5);
-      background-size: 200% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      animation: cutIn 2s cubic-bezier(.2,1.4,.4,1) forwards, rainbow 0.6s linear infinite;
-    }
-
-    .fx-banner.fever .burst {
-      width: 520px;
-      height: 520px;
-      margin: -260px 0 0 -260px;
-      background: repeating-conic-gradient(rgba(255, 120, 200, 0.6) 0deg 6deg, rgba(255, 240, 140, 0.6) 6deg 12deg, transparent 12deg 20deg);
-      animation-duration: 2s;
-    }
-
-    @keyframes rainbow {
-      to { background-position: 200% 0; }
-    }
-
-    .flash {
-      position: fixed;
-      inset: 0;
-      z-index: 1001;
-      pointer-events: none;
-      background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 200, 240, 0.4) 60%, transparent);
-      animation: flash 0.6s ease-out forwards;
-    }
-
-    @keyframes flash {
-      from { opacity: 1; }
-      to { opacity: 0; }
-    }
-
-    .pearl {
-      position: fixed;
-      top: -20px;
-      z-index: 1001;
-      pointer-events: none;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe9f4 40%, #d6a8d0 100%);
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
-      animation: pearlFall linear forwards;
-    }
-
-    .pearl.gold {
-      background: radial-gradient(circle at 35% 30%, #fffbe0 0%, #ffd34d 45%, #a86a00 100%);
-      box-shadow: 0 0 8px rgba(255, 200, 60, 0.9);
-    }
-
-    @keyframes pearlFall {
-      to { transform: translateY(110vh) rotate(360deg); }
-    }
-
     /* ===== 下のボタン（スロットのボタン風） ===== */
     .controls {
       margin-top: var(--controls-gap);
@@ -751,217 +427,6 @@
       gap: 10px;
       flex-shrink: 0;
       padding-bottom: 5px;
-    }
-
-    button {
-      font-family: inherit;
-      cursor: pointer;
-    }
-
-    .slot-btn {
-      height: 50px;
-      border-radius: 999px;
-      border: 2px solid #ffe08a;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 1rem;
-      letter-spacing: 0.08em;
-      color: #fff;
-      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
-      transition: transform 0.06s, box-shadow 0.06s;
-    }
-
-    .slot-btn.red {
-      background: linear-gradient(180deg, #ff8aa5 0%, #f0204f 50%, #b5002e 100%);
-      box-shadow: 0 5px 0 #6e0019, 0 8px 16px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.5);
-    }
-
-    .slot-btn.blue {
-      background: linear-gradient(180deg, #8ad8ff 0%, #1f8fe0 50%, #0a4fa0 100%);
-      box-shadow: 0 5px 0 #062d5e, 0 8px 16px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.5);
-    }
-
-    .slot-btn:active {
-      transform: translateY(4px);
-      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
-    }
-
-    .primary-btn {
-      display: block;
-      width: 100%;
-      height: 52px;
-      border: 2px solid #ffe08a;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #ffe58a 0%, #f2b705 50%, #c07800 100%);
-      color: #4a2600;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 1.05rem;
-      box-shadow: 0 5px 0 #6b3a00, 0 8px 16px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.6);
-    }
-
-    .primary-btn:active {
-      transform: translateY(4px);
-      box-shadow: 0 1px 0 #6b3a00;
-    }
-
-    /* ===== モーダル（下から出るシート） ===== */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 10, 26, 0.65);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-      display: none;
-      justify-content: center;
-      align-items: flex-end;
-      z-index: 200;
-    }
-
-    /* 確認ダイアログ（画面中央） */
-    .modal-overlay.center {
-      align-items: center;
-      padding: 16px;
-    }
-
-    .confirm {
-      width: 100%;
-      max-width: 340px;
-      padding: 26px 20px 20px;
-      border: 2px solid transparent;
-      border-radius: 24px;
-      background: var(--panel) padding-box, var(--gold-metal) border-box;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 190, 60, 0.25);
-      text-align: center;
-      animation: confirmIn 0.3s cubic-bezier(.2,.9,.3,1.3);
-    }
-
-    @keyframes confirmIn {
-      from { transform: scale(0.85); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    .confirm h2 {
-      font-family: 'Dela Gothic One', sans-serif;
-      font-weight: 400;
-      font-size: 1.3rem;
-      color: var(--gold-light);
-      margin-bottom: 10px;
-    }
-
-    .confirm p {
-      font-family: 'Zen Maru Gothic', sans-serif;
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: var(--text-dim);
-      margin-bottom: 22px;
-    }
-
-    .confirm-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .confirm-actions.single { grid-template-columns: 1fr; }
-    .confirm-actions.single .cancel-btn { display: none; }
-
-    .confirm-actions .slot-btn { height: 48px; font-size: 0.95rem; }
-
-    .cancel-btn {
-      height: 48px;
-      border-radius: 999px;
-      border: 2px solid rgba(255, 233, 168, 0.5);
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--text);
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 0.95rem;
-    }
-
-    .cancel-btn:active { transform: scale(0.97); }
-
-    .modal-overlay.show {
-      display: flex;
-      animation: fadeIn 0.25s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    .modal,
-    .message {
-      color: var(--text);
-      border: 2px solid transparent;
-      background: var(--panel) padding-box, var(--gold-metal) border-box;
-      box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 190, 60, 0.25);
-    }
-
-    .modal {
-      width: 100%;
-      max-width: 380px;
-      max-height: 85vh;
-      max-height: 85dvh;
-      display: flex;
-      flex-direction: column;
-      border-radius: 24px;
-      padding: 24px 20px 20px;
-      animation: confirmIn 0.3s cubic-bezier(.2,.9,.3,1.3);
-    }
-
-    .modal h2 {
-      font-family: 'Dela Gothic One', sans-serif;
-      font-weight: 400;
-      font-size: 1.35rem;
-      text-align: center;
-      color: var(--gold-light);
-      margin-bottom: 16px;
-    }
-
-    /* 中身だけスクロールさせ、閉じるボタンは常に見せる */
-    .modal ul,
-    .modal .ranking-content {
-      min-height: 0;
-      overflow-y: auto;
-    }
-
-    .modal .primary-btn { flex-shrink: 0; }
-
-    @media (max-height: 620px) {
-      .modal { padding: 18px 16px 16px; }
-      .modal h2 { margin-bottom: 10px; }
-      .modal ul { gap: 6px; margin-bottom: 14px; }
-      .rules li { font-size: 0.84rem; line-height: 1.5; }
-    }
-
-    .modal ul {
-      list-style: none;
-      margin-bottom: 20px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .rules li {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-      font-family: 'Zen Maru Gothic', sans-serif;
-      font-size: 0.92rem;
-      line-height: 1.6;
-    }
-
-    .rules li .num {
-      flex-shrink: 0;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe9f4 40%, #d6a8d0 100%);
-      color: #5a2a50;
-      display: grid;
-      place-items: center;
-      font-family: 'Outfit', sans-serif;
-      font-size: 0.75rem;
-      font-weight: 800;
-      margin-top: 1px;
     }
 
     .ranking-content {
@@ -1036,61 +501,6 @@
       flex-shrink: 0;
     }
 
-    /* ===== ゲームオーバー ===== */
-    .message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: calc(100% - 32px);
-      max-width: 360px;
-      padding: 28px 20px 22px;
-      border-radius: 24px;
-      text-align: center;
-      display: none;
-      z-index: 100;
-    }
-
-    .message.show {
-      display: block;
-      animation: popIn 0.45s cubic-bezier(.2,.9,.3,1.3);
-      box-shadow: 0 0 0 100vmax rgba(2, 10, 26, 0.7), 0 0 40px rgba(255, 190, 60, 0.35);
-    }
-
-    @keyframes popIn {
-      from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
-      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
-
-    .message h2 {
-      font-family: 'Dela Gothic One', sans-serif;
-      font-weight: 400;
-      font-size: 1.7rem;
-      color: #ffd1dc;
-      -webkit-text-stroke: 1px #6e0019;
-      text-shadow: 0 3px 0 #6e0019, 0 0 14px rgba(255, 80, 120, 0.6);
-    }
-
-    .message-sub {
-      font-family: 'Zen Maru Gothic', sans-serif;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      margin: 6px 0 14px;
-    }
-
-    .final-score {
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 3.6rem;
-      line-height: 1;
-      margin-bottom: 20px;
-      background: linear-gradient(180deg, #fffbe6 0%, #ffe066 40%, #e0a10e 60%, #fff1a8 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      -webkit-text-stroke: 1.5px #5a2a00;
-      filter: drop-shadow(0 0 14px rgba(255, 180, 40, 0.7));
-    }
-
     .score-form {
       display: flex;
       gap: 8px;
@@ -1123,8 +533,9 @@
       border-radius: 12px;
       background: linear-gradient(180deg, #ff8aa5, #e0164a);
       color: #fff;
-      font-family: 'Dela Gothic One', sans-serif;
-      font-size: 0.9rem;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.95rem;
       white-space: nowrap;
     }
 
@@ -1382,22 +793,11 @@
     </div>
   </main>
 
-  <!-- 確認モーダル（リタイア・リセット） -->
-  <div class="modal-overlay center" id="confirmModal">
-    <div class="confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-      <h2 id="confirmTitle"></h2>
-      <p id="confirmText"></p>
-      <div class="confirm-actions" id="confirmActions">
-        <button class="cancel-btn" id="confirmCancelBtn">やめる</button>
-        <button class="slot-btn" id="confirmOkBtn"></button>
-      </div>
-    </div>
-  </div>
-
   <!-- ルール説明モーダル -->
-  <div class="modal-overlay center" id="rulesModal">
+  <div class="modal-overlay" id="rulesModal">
     <div class="modal">
       <h2>あそびかた</h2>
+      <div class="modal-body">
       <ul class="rules">
         <li><span class="num">1</span>動かしたい泡をタップして、行きたいマスをタップしてね</li>
         <li><span class="num">2</span>泡は空いているマスを通って進むよ。ほかの泡は飛びこえられないから、道がふさがっていないかチェック！</li>
@@ -1406,15 +806,16 @@
         <li><span class="num">5</span>泡を動かすたびに、新しい泡が3つやってくるよ。でも泡を消せたターンはお休み</li>
         <li><span class="num">6</span>マスが泡でいっぱいになったらゲームオーバー。こまめに消していこう！</li>
       </ul>
+      </div>
       <button class="primary-btn" id="closeRulesBtn">わかった！</button>
     </div>
   </div>
 
   <!-- ランキングモーダル -->
-  <div class="modal-overlay center" id="rankingModal">
+  <div class="modal-overlay" id="rankingModal">
     <div class="modal ranking-modal">
       <h2>ランキング</h2>
-      <div id="rankingContent" class="ranking-content">
+      <div id="rankingContent" class="modal-body ranking-content">
         <p class="loading">読み込み中...</p>
       </div>
       <button class="primary-btn" id="closeRankingBtn">閉じる</button>
@@ -1434,6 +835,7 @@
     <button class="primary-btn" id="messageBtn">もういちど</button>
   </div>
 
+  <script src="arcade.js"></script>
   <script>
     // ゲーム設定
     const SIZE = 9;
@@ -2230,15 +1632,7 @@
       const title = fever ? '竜宮フィーバー!!' : count >= 6 ? 'GREAT!' : 'NICE!';
       const sub = clearStreak >= 2 ? `${clearStreak}連続!` : '';
 
-      const boardRect = document.getElementById('board').getBoundingClientRect();
-      const banner = document.createElement('div');
-      banner.className = 'fx-banner' + (fever ? ' fever' : '');
-      banner.style.left = (boardRect.left + boardRect.width / 2) + 'px';
-      banner.style.top = (boardRect.top + boardRect.height / 2) + 'px';
-      banner.innerHTML = `<div class="burst"></div><div class="fx-text">${title}</div>` +
-        (sub ? `<div class="fx-sub">${sub}</div>` : '');
-      document.body.appendChild(banner);
-      setTimeout(() => banner.remove(), fever ? 2000 : 1200);
+      Arcade.banner(document.getElementById('board'), title, { sub, fever });
 
       if (navigator.vibrate) navigator.vibrate(fever ? [40, 40, 90] : 25);
 
@@ -2248,51 +1642,12 @@
       frame.classList.add('fever');
       setTimeout(() => frame.classList.remove('fever'), 2500);
 
-      const flash = document.createElement('div');
-      flash.className = 'flash';
-      document.body.appendChild(flash);
-      setTimeout(() => flash.remove(), 600);
-
-      // 真珠と金貨を降らせる
-      for (let i = 0; i < 36; i++) {
-        const pearl = document.createElement('div');
-        const size = 8 + Math.random() * 12;
-        pearl.className = 'pearl' + (i % 3 === 0 ? ' gold' : '');
-        pearl.style.left = (Math.random() * 100) + 'vw';
-        pearl.style.width = size + 'px';
-        pearl.style.height = size + 'px';
-        pearl.style.animationDuration = (1.4 + Math.random() * 1.2) + 's';
-        pearl.style.animationDelay = (Math.random() * 0.6) + 's';
-        document.body.appendChild(pearl);
-        setTimeout(() => pearl.remove(), 3400);
-      }
+      Arcade.shower();
 
       playSound('fever');
     }
 
-    // 金枠の電飾を並べる（角は丸いので各辺の内側だけに置く）
-    function buildLights() {
-      const lightsEl = document.getElementById('lights');
-      const perSide = 10;
-      const points = [];
-      for (let i = 0; i < perSide; i++) points.push([(i + 0.5) / perSide, 0]);
-      for (let i = 0; i < perSide; i++) points.push([1, (i + 0.5) / perSide]);
-      for (let i = 0; i < perSide; i++) points.push([1 - (i + 0.5) / perSide, 1]);
-      for (let i = 0; i < perSide; i++) points.push([0, 1 - (i + 0.5) / perSide]);
-
-      const colors = ['#ff6fb5', '#5ff3ff', '#ffe066'];
-      points.forEach(([x, y], i) => {
-        const led = document.createElement('i');
-        led.className = 'led';
-        led.style.left = `calc(6px + (100% - 12px) * ${x})`;
-        led.style.top = `calc(6px + (100% - 12px) * ${y})`;
-        led.style.setProperty('--d', `${-(i / points.length) * 1.6}s`);
-        led.style.setProperty('--led', colors[i % colors.length]);
-        lightsEl.appendChild(led);
-      });
-    }
-
-    buildLights();
+    Arcade.buildLights(document.getElementById('lights'));
 
     // ゲームオーバーチェック
     function checkGameOver() {
@@ -2318,34 +1673,8 @@
       saveGame();
       window.location.href = 'index.html';
     });
-    // 確認モーダル。OK で onOk を呼ぶ（onOk を渡さなければ OK だけのお知らせ）
-    function showConfirm({ title, text, okLabel, okColor, onOk }) {
-      const modal = document.getElementById('confirmModal');
-      document.getElementById('confirmTitle').textContent = title;
-      document.getElementById('confirmText').textContent = text;
-      const okBtn = document.getElementById('confirmOkBtn');
-      okBtn.textContent = okLabel;
-      okBtn.className = `slot-btn ${okColor}`;
-      document.getElementById('confirmActions').classList.toggle('single', !onOk);
-      modal.classList.add('show');
-
-      okBtn.onclick = () => {
-        modal.classList.remove('show');
-        if (onOk) onOk();
-      };
-    }
-
-    function closeConfirm() {
-      document.getElementById('confirmModal').classList.remove('show');
-    }
-
-    document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
-    document.getElementById('confirmModal').addEventListener('click', (e) => {
-      if (e.target.id === 'confirmModal') closeConfirm();
-    });
-
     document.getElementById('resetBtn').addEventListener('click', () => {
-      showConfirm({
+      Arcade.showConfirm({
         title: 'リセットしますか？',
         text: `今のスコア（${score}点）は記録されずに、最初からやり直しになります。`,
         okLabel: 'リセット',
@@ -2355,7 +1684,7 @@
     });
     document.getElementById('retireBtn').addEventListener('click', () => {
       if (score === 0) {
-        showConfirm({
+        Arcade.showConfirm({
           title: 'まだ始まっていません',
           text: '泡を消してスコアを獲得してからリタイアできます。',
           okLabel: 'OK',
@@ -2363,7 +1692,7 @@
         });
         return;
       }
-      showConfirm({
+      Arcade.showConfirm({
         title: 'リタイアしますか？',
         text: `ここでゲームを終了して、${score}点でランキングに登録できます。`,
         okLabel: 'リタイア',

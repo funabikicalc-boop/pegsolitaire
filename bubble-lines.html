@@ -23,14 +23,17 @@
       --gutter: 10px;
       /* 上パネル（竜宮城）の高さ */
       --stage: clamp(100px, 20vh, 220px);
+      /* 盤面と下のボタンの間の余白（背の高い画面ほど広く） */
+      --controls-gap: clamp(6px, calc(8vh - 40px), 40px);
       /* 盤面（金枠ごと）の一辺。横幅いっぱいを基本に、背の低い画面では高さに合わせて縮める */
-      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - var(--stage) - 160px));
+      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - var(--stage) - var(--controls-gap) - 160px));
     }
 
     @supports (height: 100dvh) {
       :root {
         --stage: clamp(100px, 20dvh, 220px);
-        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - var(--stage) - 160px));
+        --controls-gap: clamp(6px, calc(8dvh - 40px), 40px);
+        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - var(--stage) - var(--controls-gap) - 160px));
       }
     }
 
@@ -741,6 +744,7 @@
 
     /* ===== 下のボタン（スロットのボタン風） ===== */
     .controls {
+      margin-top: var(--controls-gap);
       width: var(--frame);
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -811,6 +815,68 @@
       align-items: flex-end;
       z-index: 200;
     }
+
+    /* 確認ダイアログ（画面中央） */
+    .modal-overlay.center {
+      align-items: center;
+      padding: 16px;
+    }
+
+    .confirm {
+      width: 100%;
+      max-width: 340px;
+      padding: 26px 20px 20px;
+      border: 2px solid transparent;
+      border-radius: 24px;
+      background: var(--panel) padding-box, var(--gold-metal) border-box;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 190, 60, 0.25);
+      text-align: center;
+      animation: confirmIn 0.3s cubic-bezier(.2,.9,.3,1.3);
+    }
+
+    @keyframes confirmIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .confirm h2 {
+      font-family: 'Dela Gothic One', sans-serif;
+      font-weight: 400;
+      font-size: 1.3rem;
+      color: var(--gold-light);
+      margin-bottom: 10px;
+    }
+
+    .confirm p {
+      font-family: 'Zen Maru Gothic', sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-dim);
+      margin-bottom: 22px;
+    }
+
+    .confirm-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .confirm-actions.single { grid-template-columns: 1fr; }
+    .confirm-actions.single .cancel-btn { display: none; }
+
+    .confirm-actions .slot-btn { height: 48px; font-size: 0.95rem; }
+
+    .cancel-btn {
+      height: 48px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 233, 168, 0.5);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .cancel-btn:active { transform: scale(0.97); }
 
     .modal-overlay.show {
       display: flex;
@@ -1313,6 +1379,18 @@
       <button class="slot-btn blue" id="resetBtn">リセット</button>
     </div>
   </main>
+
+  <!-- 確認モーダル（リタイア・リセット） -->
+  <div class="modal-overlay center" id="confirmModal">
+    <div class="confirm" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle"></h2>
+      <p id="confirmText"></p>
+      <div class="confirm-actions" id="confirmActions">
+        <button class="cancel-btn" id="confirmCancelBtn">やめる</button>
+        <button class="slot-btn" id="confirmOkBtn"></button>
+      </div>
+    </div>
+  </div>
 
   <!-- ルール説明モーダル -->
   <div class="modal-overlay" id="rulesModal">
@@ -2238,15 +2316,58 @@
       saveGame();
       window.location.href = 'index.html';
     });
-    document.getElementById('resetBtn').addEventListener('click', initGame);
+    // 確認モーダル。OK で onOk を呼ぶ（onOk を渡さなければ OK だけのお知らせ）
+    function showConfirm({ title, text, okLabel, okColor, onOk }) {
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmText').textContent = text;
+      const okBtn = document.getElementById('confirmOkBtn');
+      okBtn.textContent = okLabel;
+      okBtn.className = `slot-btn ${okColor}`;
+      document.getElementById('confirmActions').classList.toggle('single', !onOk);
+      modal.classList.add('show');
+
+      okBtn.onclick = () => {
+        modal.classList.remove('show');
+        if (onOk) onOk();
+      };
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirmModal').classList.remove('show');
+    }
+
+    document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
+    document.getElementById('confirmModal').addEventListener('click', (e) => {
+      if (e.target.id === 'confirmModal') closeConfirm();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      showConfirm({
+        title: 'リセットしますか？',
+        text: `今のスコア（${score}点）は記録されずに、最初からやり直しになります。`,
+        okLabel: 'リセット',
+        okColor: 'blue',
+        onOk: initGame
+      });
+    });
     document.getElementById('retireBtn').addEventListener('click', () => {
       if (score === 0) {
-        alert('まだゲームが始まっていません');
+        showConfirm({
+          title: 'まだ始まっていません',
+          text: '泡を消してスコアを獲得してからリタイアできます。',
+          okLabel: 'OK',
+          okColor: 'blue'
+        });
         return;
       }
-      if (confirm('リタイアしますか？')) {
-        forceGameOver();
-      }
+      showConfirm({
+        title: 'リタイアしますか？',
+        text: `ここでゲームを終了して、${score}点でランキングに登録できます。`,
+        okLabel: 'リタイア',
+        okColor: 'red',
+        onOk: forceGameOver
+      });
     });
     document.getElementById('messageBtn').addEventListener('click', () => {
       document.getElementById('message').classList.remove('show');

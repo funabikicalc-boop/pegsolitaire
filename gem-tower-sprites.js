@@ -282,6 +282,70 @@
     return rows;
   }
 
+  // ===== 鍵のマーク（8種類） =====
+  const STAR = [
+    '................',
+    '.......kk.......',
+    '......kyyk......',
+    '......kwyk......',
+    '.....kyyyyk.....',
+    '.kkkkyyyyyykkkk.',
+    '.kyyyyyyyyyyyyk.',
+    '..kyyyyyyyyyyk..',
+    '...kyyyyyyyyk...',
+    '....kyyyyyyk....',
+    '....kyyyyyyk....',
+    '...kyyykkyyyk...',
+    '...kyyk..kyyk...',
+    '..kyyk....kyyk..',
+    '..kkk......kkk..',
+    '................'
+  ];
+
+  // 塗る場所を関数で決め、まわりに輪郭線を付ける
+  function shape(fill) {
+    const grid = [];
+    for (let y = 0; y < 16; y++) {
+      const row = [];
+      for (let x = 0; x < 16; x++) row.push(fill(x, y) || '.');
+      grid.push(row);
+    }
+    const out = grid.map(r => r.slice());
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if (grid[y][x] !== '.') continue;
+      const near = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => grid[y + dy] && grid[y + dy][x + dx] && grid[y + dy][x + dx] !== '.');
+      if (near) out[y][x] = 'k';
+    }
+    return out.map(r => r.join(''));
+  }
+
+  const MOON = shape((x, y) => {
+    const inBig = Math.hypot(x - 7.5, y - 7.5) <= 6;
+    const inCut = Math.hypot(x - 10.5, y - 5) <= 5.2;
+    if (!inBig || inCut) return null;
+    return x + y < 11 ? 'L' : 'l';
+  });
+
+  const SUN = shape((x, y) => {
+    const d = Math.hypot(x - 7.5, y - 7.5);
+    if (d <= 3.6) return d < 1.6 ? 'L' : 'l';
+    const ang = (Math.atan2(y - 7.5, x - 7.5) * 180 / Math.PI + 360) % 45;
+    if (d >= 5 && d <= 6.6 && (ang < 9 || ang > 36)) return 'Y';
+    return null;
+  });
+
+  // 鍵に使うマーク（並び順は変えない：保存した鍵の意味が変わってしまうため）
+  const MARKS = [
+    { id: 'gem', name: '宝玉', rows: GEM },
+    { id: 'star', name: '星', rows: STAR },
+    { id: 'moon', name: '月', rows: MOON },
+    { id: 'sun', name: '太陽', rows: SUN },
+    { id: 'bubble', name: '泡', rows: circle(16, 7.5) },
+    { id: 'statue', name: '石像', rows: watcherFrame('down') },
+    { id: 'block', name: '石', rows: BLOCK },
+    { id: 'door', name: '扉', rows: DOOR_SEALED }
+  ];
+
   // ===== 描画 =====
   function toCanvas(frames) {
     const h = frames[0].length;
@@ -323,6 +387,7 @@
     bubble: [circle(16, 7.5)],
     shot: [circle(16, 4.5)]
   };
+  MARKS.forEach(m => { SPRITES[`mark-${m.id}`] = [m.rows]; });
 
   // ページの CSS 変数に登録する（--spr-hero-down など）
   function install(target = document.documentElement) {
@@ -331,5 +396,5 @@
     });
   }
 
-  root.GemSprites = { SPRITES, PALETTE, install, toCanvas };
+  root.GemSprites = { SPRITES, PALETTE, MARKS: MARKS.map(({ id, name }) => ({ id, name })), install, toCanvas };
 })(window);

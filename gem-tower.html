@@ -649,6 +649,111 @@
       text-align: center;
     }
 
+    /* ===== 鍵 ===== */
+    .mark {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background-size: 100% 100%;
+      image-rendering: pixelated;
+    }
+
+    .key-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .key-box {
+      margin-bottom: 16px;
+      padding: 10px 10px 8px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px dashed rgba(255, 215, 120, 0.55);
+    }
+
+    .key-box .label { display: block; margin-bottom: 6px; font-family: var(--font-jp); font-size: 0.75rem; letter-spacing: 0.08em; }
+
+    .key-box p {
+      margin-top: 6px;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .floor-btn .key-row { gap: 2px; margin-top: 4px; }
+    .floor-btn .mark { width: 16px; height: 16px; }
+
+    .floor-btn .no-key {
+      margin-top: 4px;
+      height: 16px;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+    }
+
+    .key-open-btn {
+      width: 100%;
+      margin: 12px 0 8px;
+      height: 46px;
+    }
+
+    .key-slots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .key-slot {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 215, 120, 0.6);
+      background: rgba(0, 0, 0, 0.35);
+      display: grid;
+      place-items: center;
+    }
+
+    .key-slot .mark { width: 42px; height: 42px; }
+    .key-slots.wrong { animation: shake 0.35s; }
+    .key-slots.wrong .key-slot { border-color: var(--danger); }
+    .key-slots.ok .key-slot { border-color: #5ff3ea; box-shadow: 0 0 10px rgba(95, 243, 234, 0.6); }
+
+    .key-msg {
+      min-height: 1.5em;
+      margin-bottom: 12px;
+      text-align: center;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .key-msg.ok { color: #5ff3ea; }
+    .key-msg.wrong { color: var(--danger); }
+
+    .key-pad {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .key-pad button {
+      aspect-ratio: 1;
+      border-radius: 14px;
+      border: 2px solid #ffe08a;
+      background: linear-gradient(180deg, #4a3c86, #241c4c);
+      box-shadow: 0 3px 0 #120c30;
+      display: grid;
+      place-items: center;
+    }
+
+    .key-pad button:active { transform: translateY(2px); box-shadow: 0 1px 0 #120c30; }
+    .key-pad .mark { width: 68%; height: 68%; }
+
     /* ===== ドット絵 ===== */
     .spr {
       display: block;
@@ -906,8 +1011,27 @@
   <div class="modal-overlay" id="floorModal">
     <div class="modal">
       <h2>フロアをえらぶ</h2>
-      <div class="modal-body"><div class="floors" id="floorList"></div></div>
+      <div class="modal-body">
+        <div class="floors" id="floorList"></div>
+        <button class="slot-btn blue key-open-btn" id="keyOpenBtn">鍵を入力する</button>
+      </div>
       <button class="primary-btn" id="closeFloorBtn">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 鍵の入力 -->
+  <div class="modal-overlay" id="keyModal">
+    <div class="modal">
+      <h2>鍵を入力</h2>
+      <div class="modal-body">
+        <div class="key-slots" id="keySlots"></div>
+        <p class="key-msg" id="keyMsg"></p>
+        <div class="key-pad" id="keyPad"></div>
+      </div>
+      <div class="card-actions two">
+        <button class="cancel-btn" id="keyBackBtn">1つけす</button>
+        <button class="slot-btn blue" id="keyCloseBtn">閉じる</button>
+      </div>
     </div>
   </div>
 
@@ -923,6 +1047,7 @@
           <li><span class="num">4</span>石像の視線（赤いマス）に入ると見つかってしまう。ブロックで視線をさえぎろう</li>
           <li><span class="num">5</span>真ん中の「泡」を押してから向きを選ぶと、泡の魔法を撃てるよ。石像を閉じ込めると押して動かせる（5ターンで割れる）</li>
           <li><span class="num">6</span>失敗しても「1手もどす」で何回でもやり直せるよ</li>
+          <li><span class="num">7</span>フロアをクリアすると次のフロアの「鍵」がもらえるよ。メモしておけば、別の端末でも「フロアをえらぶ」→「鍵を入力する」で続きから遊べる</li>
         </ul>
       </div>
       <button class="primary-btn" id="closeRulesBtn">わかった！</button>
@@ -937,10 +1062,10 @@
     const STAGES = window.GEM_TOWER_STAGES;
     // ドット絵が標準。?skin=classic で前の絵柄に切り替えて比べられる
     const PIXEL = new URLSearchParams(location.search).get('skin') !== 'classic';
-    if (PIXEL) {
-      GemSprites.install();
-      document.body.classList.add('pixel');
-    }
+    // 鍵のマークにも使うので、ドット絵の画像はどちらの絵柄でも用意する
+    GemSprites.install();
+    if (PIXEL) document.body.classList.add('pixel');
+    const MARK_NAMES = Object.fromEntries(GemSprites.MARKS.map(m => [m.id, m.name]));
     const PROGRESS_KEY = 'gemTowerProgress';
     // フロアの途中の状態（1手ごとに保存）
     const FLOOR_SAVE_KEY = 'gemTowerSave';
@@ -1003,13 +1128,22 @@
     function unlockedUpTo() {
       const cleared = Object.keys(progress.stars).map(Number).filter(n => progress.stars[n]);
       const top = cleared.length ? Math.max(...cleared) + 1 : 0;
-      return Math.min(top, STAGES.length - 1);
+      // 鍵で開けたフロアまでも遊べる
+      return Math.min(Math.max(top, progress.unlocked || 0), STAGES.length - 1);
     }
 
     function starsFor(moves, par) {
       if (moves <= par) return 3;
       if (moves <= Math.ceil(par * 1.5)) return 2;
       return 1;
+    }
+
+    function markHtml(id) {
+      return `<i class="mark" style="background-image:var(--spr-mark-${id})" title="${MARK_NAMES[id]}" aria-label="${MARK_NAMES[id]}"></i>`;
+    }
+
+    function keyHtml(key) {
+      return `<div class="key-row">${key.map(markHtml).join('')}</div>`;
     }
 
     function starText(n) {
@@ -1305,7 +1439,12 @@
           <div class="intro-floor">${floor + 1}F CLEAR</div>
           <div class="stars-big">${starText(stars)}</div>
           <p class="result-moves">${state.moves}手（星3つは${st.par}手以内）</p>
-          ${last ? '<p class="intro-hint" style="text-align:center">試作版はここまで！<br>上のフロアは準備中です</p>' : ''}
+          ${last ? '<p class="intro-hint" style="text-align:center">試作版はここまで！<br>上のフロアは準備中です</p>' : `
+            <div class="key-box">
+              <span class="label">${floor + 2}F の鍵</span>
+              ${keyHtml(STAGES[floor + 1].key)}
+              <p>メモしておくと、別の端末でもここから遊べるよ</p>
+            </div>`}
           <div class="card-actions${last ? '' : ' two'}">
             <button class="slot-btn blue" data-act="retry">もう一度</button>
             ${last ? '' : '<button class="slot-btn green" data-act="next">次のフロアへ</button>'}
@@ -1404,6 +1543,7 @@
           <div class="f">${i + 1}F</div>
           <div class="n">${i > max ? '？？？' : st.name}</div>
           <div class="st">${starText(progress.stars[i] || 0)}</div>
+          ${i > max ? '<div class="no-key">鍵が必要</div>' : st.key ? keyHtml(st.key) : '<div class="no-key">鍵なし</div>'}
         </button>`).join('');
       document.getElementById('floorModal').classList.add('show');
     }
@@ -1422,6 +1562,73 @@
       document.getElementById(close).addEventListener('click', () => m.classList.remove('show'));
       m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('show'); });
     });
+
+    // ===== 鍵の入力 =====
+    const keyModal = document.getElementById('keyModal');
+    const keySlotsEl = document.getElementById('keySlots');
+    const keyMsgEl = document.getElementById('keyMsg');
+    let keyEntry = [];
+    let keyChecking = false;
+
+    document.getElementById('keyPad').innerHTML = GemSprites.MARKS
+      .map(m => `<button data-mark="${m.id}" aria-label="${m.name}">${markHtml(m.id)}</button>`).join('');
+
+    function renderKeyInput(msg = 'マークを4つえらんでね', cls = '') {
+      keySlotsEl.className = `key-slots ${cls}`;
+      keySlotsEl.innerHTML = [0, 1, 2, 3].map(i => `<div class="key-slot">${keyEntry[i] ? markHtml(keyEntry[i]) : ''}</div>`).join('');
+      keyMsgEl.className = `key-msg ${cls}`;
+      keyMsgEl.textContent = msg;
+    }
+
+    function openKeyInput() {
+      keyEntry = [];
+      keyChecking = false;
+      renderKeyInput();
+      document.getElementById('floorModal').classList.remove('show');
+      keyModal.classList.add('show');
+    }
+
+    function checkKey() {
+      keyChecking = true;
+      const n = STAGES.findIndex(st => st.key && st.key.join() === keyEntry.join());
+      if (n >= 0) {
+        progress.unlocked = Math.max(progress.unlocked || 0, n);
+        saveProgress(progress);
+        renderKeyInput(`${n + 1}F の鍵が開いた！`, 'ok');
+        sounds.open();
+        setTimeout(() => {
+          keyModal.classList.remove('show');
+          startFloor(n);
+        }, 900);
+      } else {
+        renderKeyInput('鍵が合わないみたい…', 'wrong');
+        sounds.caught();
+        setTimeout(() => {
+          keyEntry = [];
+          keyChecking = false;
+          renderKeyInput();
+        }, 900);
+      }
+    }
+
+    document.getElementById('keyPad').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-mark]');
+      if (!btn || keyChecking || keyEntry.length >= 4) return;
+      keyEntry.push(btn.dataset.mark);
+      sounds.move();
+      renderKeyInput();
+      if (keyEntry.length === 4) checkKey();
+    });
+
+    document.getElementById('keyBackBtn').addEventListener('click', () => {
+      if (keyChecking) return;
+      keyEntry.pop();
+      renderKeyInput();
+    });
+
+    document.getElementById('keyCloseBtn').addEventListener('click', () => keyModal.classList.remove('show'));
+    keyModal.addEventListener('click', (e) => { if (e.target === keyModal) keyModal.classList.remove('show'); });
+    document.getElementById('keyOpenBtn').addEventListener('click', openKeyInput);
 
     // ===== 操作 =====
     function setAiming(on) {

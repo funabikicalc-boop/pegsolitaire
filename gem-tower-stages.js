@@ -3,6 +3,9 @@
 //   ^ v < > 見張りの石像（矢印の向きを見張る）
 //   shots: 泡の魔法を撃てる回数
 //   par: 最短手数（gem-tower の検証スクリプトで求めた値。星3つの基準）
+//   key: そのフロアから遊び始めるための鍵（マーク4つ）。
+//        マーク: gem 宝玉 / star 星 / moon 月 / sun 太陽 / bubble 泡 / statue 石像 / block 石 / door 扉
+//        一度公開した鍵は変えない（プレイヤーがメモした鍵が使えなくなるため）。フロアごとに重ならないようにする
 (function (root) {
   const stages = [
     {
@@ -24,6 +27,7 @@
     },
     {
       name: '石の門',
+      key: ['star', 'gem', 'moon', 'door'],
       par: 40,
       hint: '石のブロックは押して動かせる。押す向きをよく考えて',
       shots: 0,
@@ -41,6 +45,7 @@
     },
     {
       name: '水の回廊',
+      key: ['sun', 'bubble', 'statue', 'gem'],
       par: 30,
       hint: 'ブロックを水に落とすと、足場になるよ',
       shots: 0,
@@ -58,6 +63,7 @@
     },
     {
       name: '見張りの目',
+      key: ['moon', 'block', 'star', 'sun'],
       par: 30,
       hint: '石像の視線に入ると見つかってしまう。ブロックで視線をさえぎろう',
       shots: 0,
@@ -75,6 +81,7 @@
     },
     {
       name: '泡の魔法',
+      key: ['door', 'statue', 'bubble', 'moon'],
       par: 21,
       hint: '泡の魔法で石像を閉じ込めると、押して動かせる。泡は5ターンで割れるよ',
       shots: 1,

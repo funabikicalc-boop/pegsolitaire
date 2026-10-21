@@ -21,13 +21,16 @@
       --panel: linear-gradient(180deg, rgba(8, 30, 66, 0.92), rgba(3, 14, 36, 0.95));
       --danger: #ff3b5c;
       --gutter: 10px;
+      /* 上パネル（竜宮城）の高さ */
+      --stage: clamp(100px, 20vh, 220px);
       /* 盤面（金枠ごと）の一辺。横幅いっぱいを基本に、背の低い画面では高さに合わせて縮める */
-      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - 270px));
+      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - var(--stage) - 160px));
     }
 
     @supports (height: 100dvh) {
       :root {
-        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - 270px));
+        --stage: clamp(100px, 20dvh, 220px);
+        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - var(--stage) - 160px));
       }
     }
 
@@ -72,7 +75,7 @@
       width: 16vw;
       max-width: 120px;
       background: linear-gradient(180deg, rgba(210, 255, 255, 0.45), rgba(210, 255, 255, 0) 75%);
-      filter: blur(8px);
+      will-change: opacity;
       transform-origin: top center;
       animation: ray 9s ease-in-out infinite alternate;
     }
@@ -160,8 +163,8 @@
     /* ===== 上パネル（竜宮城の絵とロゴ） ===== */
     .stage {
       position: relative;
-      flex: 1 1 auto;
-      min-height: 110px;
+      flex: 0 0 auto;
+      height: var(--stage);
       width: 100%;
       display: flex;
       flex-direction: column;
@@ -243,13 +246,11 @@
       height: 42px;
       border-radius: 50%;
       border: 2px solid rgba(255, 215, 120, 0.8);
-      background: rgba(3, 20, 48, 0.6);
+      background: rgba(3, 20, 48, 0.75);
       color: var(--gold-light);
       display: grid;
       place-items: center;
       cursor: pointer;
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
       box-shadow: 0 0 12px rgba(255, 200, 80, 0.3);
       z-index: 2;
     }
@@ -399,12 +400,24 @@
       border-radius: 50%;
       transform: translate(-50%, -50%);
       background: #7a5200;
+    }
+
+    .led::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px 1px var(--led), 0 0 10px 3px var(--led);
+      opacity: 0;
+      will-change: opacity;
       animation: chase 1.6s linear infinite;
+      animation-delay: var(--d);
     }
 
     @keyframes chase {
-      0%, 35% { background: #fff; box-shadow: 0 0 4px 1px var(--led), 0 0 10px 3px var(--led); }
-      36%, 100% { background: #7a5200; box-shadow: none; }
+      0%, 35% { opacity: 1; }
+      36%, 100% { opacity: 0; }
     }
 
     .frame.fever {
@@ -414,7 +427,7 @@
         0 0 90px rgba(255, 220, 80, 0.6);
     }
 
-    .frame.fever .led { animation-duration: 0.35s; }
+    .frame.fever .led::after { animation-duration: 0.35s; }
 
     .frame.danger {
       box-shadow:
@@ -423,14 +436,17 @@
         0 18px 40px rgba(0, 0, 0, 0.6);
     }
 
-    .frame.danger .led {
-      --led: #ff2a4a !important;
+    .frame.danger .led { background: #5a0010; }
+
+    .frame.danger .led::after {
+      --led: #ff2a4a;
+      background: #ff8a9b;
       animation: dangerBlink 0.7s steps(2) infinite;
     }
 
     @keyframes dangerBlink {
-      0% { background: #ff8a9b; box-shadow: 0 0 8px 3px #ff2a4a; }
-      100% { background: #5a0010; box-shadow: none; }
+      0% { opacity: 1; }
+      100% { opacity: 0; }
     }
 
     .corner-pearl {
@@ -517,8 +533,7 @@
       width: 34%;
       height: 24%;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.8);
-      filter: blur(1px);
+      background: radial-gradient(ellipse, rgba(255, 255, 255, 0.85) 30%, rgba(255, 255, 255, 0) 70%);
       transform: rotate(-30deg);
     }
 
@@ -2191,7 +2206,7 @@
         led.className = 'led';
         led.style.left = `calc(6px + (100% - 12px) * ${x})`;
         led.style.top = `calc(6px + (100% - 12px) * ${y})`;
-        led.style.animationDelay = `${-(i / points.length) * 1.6}s`;
+        led.style.setProperty('--d', `${-(i / points.length) * 1.6}s`);
         led.style.setProperty('--led', colors[i % colors.length]);
         lightsEl.appendChild(led);
       });

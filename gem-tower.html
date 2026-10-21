@@ -942,6 +942,8 @@
       document.body.classList.add('pixel');
     }
     const PROGRESS_KEY = 'gemTowerProgress';
+    // フロアの途中の状態（1手ごとに保存）
+    const FLOOR_SAVE_KEY = 'gemTowerSave';
     const DIR_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
     let floor = 0;
@@ -971,10 +973,37 @@
 
     let progress = loadProgress();
 
+    // ステージの地図が変わったら古い途中セーブは使わない
+    function stageSig(n) {
+      return STAGES[n].map.join('/') + '|' + STAGES[n].shots;
+    }
+
+    function saveFloor() {
+      if (!state || state.status !== 'play') return;
+      try {
+        localStorage.setItem(FLOOR_SAVE_KEY, JSON.stringify({
+          floor, sig: stageSig(floor), state, history: history.slice(-300)
+        }));
+      } catch (e) {}
+    }
+
+    function clearFloorSave() {
+      try { localStorage.removeItem(FLOOR_SAVE_KEY); } catch (e) {}
+    }
+
+    function loadFloorSave() {
+      try {
+        const d = JSON.parse(localStorage.getItem(FLOOR_SAVE_KEY));
+        if (d && STAGES[d.floor] && d.sig === stageSig(d.floor) && d.state.status === 'play') return d;
+      } catch (e) {}
+      return null;
+    }
+
+    // クリアした一番上のフロアの次まで遊べる
     function unlockedUpTo() {
-      let n = 0;
-      while (n < STAGES.length - 1 && progress.stars[n]) n++;
-      return n;
+      const cleared = Object.keys(progress.stars).map(Number).filter(n => progress.stars[n]);
+      const top = cleared.length ? Math.max(...cleared) + 1 : 0;
+      return Math.min(top, STAGES.length - 1);
     }
 
     function starsFor(moves, par) {
@@ -1179,6 +1208,7 @@
       state = result.state;
       handleEvents(result.events, action);
       render();
+      saveFloor();
       if (state.status === 'caught') onCaught(result.events.find(e => e.type === 'caught'));
       if (state.status === 'clear') onClear();
     }
@@ -1259,6 +1289,7 @@
       progress.stars[floor] = best;
       progress.floor = Math.min(floor + 1, STAGES.length - 1);
       saveProgress(progress);
+      clearFloorSave();
 
       sounds.clear();
       entityEls.get('player').classList.add('clear');
@@ -1285,6 +1316,7 @@
     // ===== フロアの開始 =====
     function startFloor(n, { intro = true } = {}) {
       clearTimeout(cardTimer);
+      clearFloorSave();
       floor = n;
       const st = STAGES[n];
       state = GemTower.parse(st);
@@ -1317,6 +1349,26 @@
       entitiesEl.innerHTML = '';
       entityEls.clear();
       render();
+      saveFloor();
+    }
+
+    // 途中セーブから再開する
+    function resumeFloor(save) {
+      floor = save.floor;
+      state = save.state;
+      history = save.history || [];
+      setAiming(false);
+      document.getElementById('floorLabel').textContent = `${floor + 1}F ${STAGES[floor].name}`;
+      buildBoard();
+      render();
+      showCard(`
+        <div class="intro-floor">${floor + 1}F</div>
+        <div class="intro-name">${STAGES[floor].name}</div>
+        <p class="intro-hint" style="text-align:center">前回のつづきから遊べます（${state.moves}手目）</p>
+        <div class="card-actions two">
+          <button class="slot-btn red" data-act="retry">最初から</button>
+          <button class="slot-btn green" data-act="close">つづきから</button>
+        </div>`);
     }
 
     // ===== カード・モーダル =====
@@ -1453,7 +1505,9 @@
     }
 
     Arcade.buildLights(document.getElementById('lights'), 10);
-    startFloor(Math.min(progress.floor || 0, unlockedUpTo()));
+    const floorSave = loadFloorSave();
+    if (floorSave) resumeFloor(floorSave);
+    else startFloor(Math.min(progress.floor || 0, unlockedUpTo()));
   </script>
 </body>
 </html>

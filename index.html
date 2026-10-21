@@ -518,7 +518,7 @@
       </div>
     </a>
 
-    <a href="gem-tower.html" class="cabinet gem" data-save="gemTowerProgress">
+    <a href="gem-tower.html" class="cabinet gem" data-save="gemTowerProgress gemTowerSave">
       <div class="cab-top">
         <div class="cab-title"><span class="w">Gem</span> <span class="w">Tower</span></div>
         <div class="cab-sub">宝玉の塔（試作）</div>
@@ -625,7 +625,7 @@
     // 途中のセーブがあるゲームに「つづきから」を出す
     document.querySelectorAll('.cabinet[data-save]').forEach((el) => {
       try {
-        if (localStorage.getItem(el.dataset.save)) el.classList.add('has-save');
+        if (el.dataset.save.split(' ').some(k => localStorage.getItem(k))) el.classList.add('has-save');
       } catch (e) {}
     });
   </script>

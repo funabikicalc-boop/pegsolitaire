@@ -2,26 +2,33 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0f1f">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#04203f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Bubble Lines</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@600;800&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0a0f1f;
-      --surface: rgba(255, 255, 255, 0.05);
-      --surface-strong: rgba(255, 255, 255, 0.09);
-      --line: rgba(255, 255, 255, 0.09);
-      --text: #eef2ff;
-      --text-dim: rgba(226, 232, 255, 0.55);
-      --accent: #5eead4;
-      --accent-2: #818cf8;
-      --danger: #fb7185;
-      --radius-lg: 28px;
-      --radius-md: 16px;
-      --board: min(calc(100vw - 32px), 460px, calc(100dvh - 260px));
+      --text: #fff8e7;
+      --text-dim: rgba(255, 248, 231, 0.65);
+      --gold-light: #ffe9a8;
+      --gold: #f5c542;
+      --gold-dark: #6b4500;
+      --gold-metal: linear-gradient(160deg, #fff6cc 0%, #f2c94c 22%, #a8740a 45%, #ffe58a 62%, #c8961a 80%, #7a5200 100%);
+      --panel: linear-gradient(180deg, rgba(8, 30, 66, 0.92), rgba(3, 14, 36, 0.95));
+      --danger: #ff3b5c;
+      --gutter: 10px;
+      /* 盤面（金枠ごと）の一辺。横幅いっぱいを基本に、背の低い画面では高さに合わせて縮める */
+      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - 270px));
+    }
+
+    @supports (height: 100dvh) {
+      :root {
+        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - 270px));
+      }
     }
 
     * {
@@ -31,193 +38,300 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html { background: var(--bg); }
+    html, body {
+      height: 100%;
+      background: #03132b;
+    }
 
     body {
       font-family: 'Outfit', 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
       color: var(--text);
-      min-height: 100vh;
-      min-height: 100dvh;
-      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow-x: hidden;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
     }
 
-    /* オーロラ風の背景 */
-    .aurora {
+    /* ===== 海の背景 ===== */
+    .scene {
       position: fixed;
       inset: 0;
-      z-index: -1;
       overflow: hidden;
       pointer-events: none;
+      background:
+        radial-gradient(ellipse 120% 60% at 50% 115%, rgba(255, 205, 130, 0.28), transparent 60%),
+        radial-gradient(ellipse 140% 90% at 50% -15%, #36c9d6 0%, #0b6d93 28%, #063a6b 55%, #03132b 88%);
     }
 
-    .aurora::before,
-    .aurora::after {
-      content: '';
+    /* 水面から差し込む光 */
+    .rays i {
       position: absolute;
-      width: 70vmax;
-      height: 70vmax;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.35;
-      animation: drift 18s ease-in-out infinite alternate;
+      top: -20%;
+      height: 110%;
+      width: 16vw;
+      max-width: 120px;
+      background: linear-gradient(180deg, rgba(210, 255, 255, 0.45), rgba(210, 255, 255, 0) 75%);
+      filter: blur(8px);
+      transform-origin: top center;
+      animation: ray 9s ease-in-out infinite alternate;
     }
 
-    .aurora::before {
-      background: radial-gradient(circle, #2dd4bf 0%, transparent 60%);
-      top: -30vmax;
-      left: -20vmax;
+    .rays i:nth-child(1) { left: 8%;  transform: rotate(14deg);  animation-delay: 0s; }
+    .rays i:nth-child(2) { left: 30%; transform: rotate(6deg);   animation-delay: -3s; width: 10vw; }
+    .rays i:nth-child(3) { left: 52%; transform: rotate(-4deg);  animation-delay: -6s; }
+    .rays i:nth-child(4) { left: 74%; transform: rotate(-12deg); animation-delay: -2s; width: 9vw; }
+
+    @keyframes ray {
+      0% { opacity: 0.35; }
+      100% { opacity: 0.85; }
     }
 
-    .aurora::after {
-      background: radial-gradient(circle, #6366f1 0%, transparent 60%);
-      bottom: -35vmax;
-      right: -25vmax;
-      animation-delay: -9s;
+    .reef {
+      position: absolute;
+      bottom: -6px;
+      height: min(42vh, 320px);
     }
 
-    @keyframes drift {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(6vmax, 4vmax) scale(1.1); }
+    .reef-left { left: -10px; }
+    .reef-right { right: -10px; }
+
+    .sway {
+      transform-box: fill-box;
+      transform-origin: bottom center;
+      animation: sway 5s ease-in-out infinite alternate;
     }
 
-    /* 背景の泡 */
+    .sway:nth-of-type(2n) { animation-duration: 6.5s; animation-delay: -2s; }
+
+    @keyframes sway {
+      0% { transform: rotate(-4deg); }
+      100% { transform: rotate(4deg); }
+    }
+
+    .fish {
+      position: absolute;
+      left: 0;
+      width: 36px;
+      fill: rgba(6, 40, 78, 0.75);
+      animation: swim 26s linear infinite;
+    }
+
+    .fish.f1 { top: 22%; animation-delay: -4s; }
+    .fish.f2 { top: 48%; width: 24px; animation-duration: 34s; animation-delay: -20s; }
+    .fish.f3 { top: 64%; width: 44px; animation-duration: 30s; animation-delay: -12s; }
+
+    @keyframes swim {
+      0% { transform: translateX(110vw) translateY(0); }
+      50% { transform: translateX(45vw) translateY(-14px); }
+      100% { transform: translateX(-20vw) translateY(0); }
+    }
+
     .bubble-bg {
-      position: fixed;
+      position: absolute;
       bottom: -30px;
       border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(255,255,255,0.06) 60%);
-      animation: rise 12s linear infinite;
-      pointer-events: none;
-      z-index: -1;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(255,255,255,0.05) 60%);
+      animation: rise 11s linear infinite;
     }
 
     @keyframes rise {
-      0% { transform: translateY(0); opacity: 0; }
-      10% { opacity: 0.6; }
-      100% { transform: translateY(-110vh); opacity: 0; }
+      0% { transform: translateY(0) translateX(0); opacity: 0; }
+      10% { opacity: 0.8; }
+      50% { transform: translateY(-55vh) translateX(10px); }
+      100% { transform: translateY(-110vh) translateX(-6px); opacity: 0; }
     }
 
-    /* 上部バー */
-    .topbar {
-      width: var(--board);
+    /* ===== 画面全体（スマホ縦1列） ===== */
+    .app {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      height: 100%;
+      margin: 0 auto;
+      padding: max(8px, env(safe-area-inset-top)) var(--gutter) max(10px, env(safe-area-inset-bottom));
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-
-    .brand {
-      font-weight: 800;
-      font-size: 1.15rem;
-      letter-spacing: 0.02em;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .topbar-actions {
-      display: flex;
       gap: 8px;
     }
 
+    /* ===== 上パネル（竜宮城の絵とロゴ） ===== */
+    .stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 110px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .stage-art {
+      position: absolute;
+      top: 6px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 58px);
+      overflow: visible;
+    }
+
+    .palace-glow { animation: glow 4s ease-in-out infinite alternate; }
+
+    @keyframes glow {
+      0% { opacity: 0.55; }
+      100% { opacity: 1; }
+    }
+
+    .mermaid {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: float 4.5s ease-in-out infinite alternate;
+    }
+
+    .mermaid.right { animation-delay: -2.2s; }
+
+    @keyframes float {
+      0% { transform: translateY(4px) rotate(-3deg); }
+      100% { transform: translateY(-6px) rotate(3deg); }
+    }
+
+    .logo {
+      position: relative;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .logo-title {
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: clamp(30px, 10vw, 44px);
+      letter-spacing: 0.02em;
+      background: linear-gradient(180deg, #fffbe6 0%, #ffe066 35%, #e0a10e 55%, #fff1a8 75%, #c8860a 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 1.5px #5a3200;
+      filter: drop-shadow(0 3px 0 #3a1f00) drop-shadow(0 0 14px rgba(255, 190, 60, 0.7));
+    }
+
+    /* 背の低い画面ではロゴを小さくして竜宮城の絵を残す */
+    @media (max-height: 720px) {
+      .stage-art { height: calc(100% - 48px); }
+      .logo-title { font-size: clamp(26px, 8.5vw, 34px); }
+    }
+
+    .logo-sub {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 3px 14px;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      color: #ffe9a8;
+      background: linear-gradient(180deg, #e8243c, #9b0b22);
+      border: 1px solid #ffd76b;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
     .icon-btn {
-      width: 40px;
-      height: 40px;
+      position: absolute;
+      top: 0;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--text);
+      border: 2px solid rgba(255, 215, 120, 0.8);
+      background: rgba(3, 20, 48, 0.6);
+      color: var(--gold-light);
       display: grid;
       place-items: center;
       cursor: pointer;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: background 0.2s, transform 0.1s;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 0 12px rgba(255, 200, 80, 0.3);
+      z-index: 2;
     }
 
-    .icon-btn:hover { background: var(--surface-strong); }
-    .icon-btn:active { transform: scale(0.92); }
+    .icon-btn:active { transform: scale(0.9); }
     .icon-btn svg { width: 20px; height: 20px; }
+    #backBtn { left: 0; }
+    #helpBtn { right: 50px; }
+    #rankingBtn { right: 0; }
 
-    /* スコアと次の玉 */
+    /* ===== スコア表示（スロットのカウンター風） ===== */
     .hud {
-      width: var(--board);
+      width: var(--frame);
       display: flex;
-      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .counter,
+    .next {
+      border: 2px solid transparent;
+      border-radius: 14px;
+      background: var(--panel) padding-box, var(--gold-metal) border-box;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      padding: 6px 12px;
+    }
+
+    .counter {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .counter-row {
+      display: flex;
+      align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 12px;
     }
 
     .label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      color: var(--text-dim);
-      text-transform: uppercase;
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      color: var(--gold);
     }
 
     .score-value {
-      font-size: 2.6rem;
+      font-size: 1.7rem;
       font-weight: 800;
       line-height: 1;
+      color: #fff3c4;
+      text-shadow: 0 0 10px rgba(255, 200, 60, 0.8);
       font-variant-numeric: tabular-nums;
       display: inline-block;
     }
 
-    .score-value.bump {
-      animation: bump 0.35s ease;
-    }
+    .score-value.bump { animation: bump 0.4s ease; }
 
     @keyframes bump {
-      40% { transform: scale(1.18); color: var(--accent); }
+      40% { transform: scale(1.25); color: #fff; }
     }
 
-    .next-balls {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
-    }
-
-    #nextBalls {
-      display: flex;
-      gap: 6px;
-      padding: 6px 8px;
-      border-radius: 999px;
-      background: var(--surface);
-      border: 1px solid var(--line);
-    }
-
-    .ball.preview-ball {
-      width: 20px;
-      height: 20px;
-    }
-
-    /* 盤面の埋まり具合 */
-    .fill-meter {
-      width: var(--board);
+    .meter {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      font-size: 0.75rem;
+      gap: 8px;
+      font-size: 0.68rem;
       color: var(--text-dim);
+    }
+
+    .meter strong {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
     }
 
     .fill-track {
       flex: 1;
-      height: 6px;
+      height: 5px;
       border-radius: 999px;
-      background: var(--surface-strong);
+      background: rgba(255, 255, 255, 0.12);
       overflow: hidden;
     }
 
@@ -225,67 +339,176 @@
       height: 100%;
       width: 0;
       border-radius: inherit;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      transition: width 0.4s ease, background 0.4s;
+      background: linear-gradient(90deg, #5ff3ff, #ffe066);
+      transition: width 0.4s ease;
     }
 
     .fill-bar.danger {
-      background: linear-gradient(90deg, #f59e0b, var(--danger));
+      background: linear-gradient(90deg, #ff9f1c, var(--danger));
+      animation: blink 0.8s steps(2) infinite;
     }
 
-    .fill-meter strong {
-      color: var(--text);
-      font-variant-numeric: tabular-nums;
+    @keyframes blink {
+      50% { opacity: 0.4; }
     }
 
-    /* 盤面 */
+    .next {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    #nextBalls {
+      display: flex;
+      gap: 5px;
+    }
+
+    .ball.preview-ball {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* ===== 盤面（金枠＋電飾） ===== */
+    .frame {
+      position: relative;
+      flex-shrink: 0;
+      width: var(--frame);
+      height: var(--frame);
+      padding: 12px;
+      border-radius: 24px;
+      background: var(--gold-metal);
+      box-shadow:
+        0 0 0 2px #3a2400,
+        0 0 28px rgba(255, 190, 60, 0.45),
+        0 18px 40px rgba(0, 0, 0, 0.6);
+      transition: box-shadow 0.4s;
+    }
+
+    .lights {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .led {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: #7a5200;
+      animation: chase 1.6s linear infinite;
+    }
+
+    @keyframes chase {
+      0%, 35% { background: #fff; box-shadow: 0 0 4px 1px var(--led), 0 0 10px 3px var(--led); }
+      36%, 100% { background: #7a5200; box-shadow: none; }
+    }
+
+    .frame.fever {
+      box-shadow:
+        0 0 0 2px #3a2400,
+        0 0 50px rgba(255, 110, 200, 0.9),
+        0 0 90px rgba(255, 220, 80, 0.6);
+    }
+
+    .frame.fever .led { animation-duration: 0.35s; }
+
+    .frame.danger {
+      box-shadow:
+        0 0 0 2px #3a0000,
+        0 0 30px rgba(255, 40, 70, 0.7),
+        0 18px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .frame.danger .led {
+      --led: #ff2a4a !important;
+      animation: dangerBlink 0.7s steps(2) infinite;
+    }
+
+    @keyframes dangerBlink {
+      0% { background: #ff8a9b; box-shadow: 0 0 8px 3px #ff2a4a; }
+      100% { background: #5a0010; box-shadow: none; }
+    }
+
+    .corner-pearl {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe3f1 40%, #c9a3c9 100%);
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+    }
+
+    .corner-pearl:nth-of-type(1) { top: 3px; left: 3px; }
+    .corner-pearl:nth-of-type(2) { top: 3px; right: 3px; }
+    .corner-pearl:nth-of-type(3) { bottom: 3px; left: 3px; }
+    .corner-pearl:nth-of-type(4) { bottom: 3px; right: 3px; }
+
+    .crest {
+      position: absolute;
+      top: -17px;
+      left: 50%;
+      width: 52px;
+      transform: translateX(-50%);
+      filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+      pointer-events: none;
+      z-index: 3;
+    }
+
     .board {
-      width: var(--board);
-      aspect-ratio: 1;
-      padding: calc(var(--board) * 0.022);
-      gap: calc(var(--board) * 0.009);
-      border-radius: var(--radius-lg);
-      background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-      border: 1px solid var(--line);
-      box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.08);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 4px;
+      gap: 3px;
+      border-radius: 14px;
+      background: radial-gradient(ellipse at 50% 0%, #11487a 0%, #072349 60%, #041733 100%);
+      box-shadow: inset 0 0 0 2px #3a2400, inset 0 6px 20px rgba(0, 0, 0, 0.6);
       display: grid;
       grid-template-columns: repeat(9, 1fr);
       grid-template-rows: repeat(9, 1fr);
     }
 
     .cell {
-      border-radius: 28%;
-      background: rgba(255, 255, 255, 0.04);
+      border-radius: 30%;
+      background: rgba(120, 200, 255, 0.07);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -2px 4px rgba(0, 0, 0, 0.25);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.15s, box-shadow 0.15s;
     }
-
-    .cell:hover { background: rgba(255, 255, 255, 0.08); }
 
     .cell.selected {
-      background: rgba(94, 234, 212, 0.12);
-      box-shadow: inset 0 0 0 2px var(--accent);
+      background: rgba(255, 215, 100, 0.2);
+      box-shadow: inset 0 0 0 2px #ffd34d, 0 0 12px rgba(255, 211, 77, 0.6);
     }
 
-    /* ボール */
+    /* 行けないマスをタップしたとき */
+    .cell.blocked { animation: blocked 0.35s ease; }
+
+    @keyframes blocked {
+      0%, 100% { background: rgba(120, 200, 255, 0.07); }
+      30% { background: rgba(255, 59, 92, 0.45); }
+    }
+
+    /* ===== 玉 ===== */
     .ball {
       position: relative;
-      width: 78%;
-      height: 78%;
+      width: 80%;
+      height: 80%;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 30%, var(--c1) 0%, var(--c2) 45%, var(--c3) 100%);
       box-shadow:
-        0 4px 10px -2px var(--glow),
-        inset 0 -3px 6px rgba(0, 0, 0, 0.25);
+        0 3px 8px -1px var(--glow),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.3),
+        inset 0 2px 3px rgba(255, 255, 255, 0.35);
       transition: transform 0.15s;
     }
 
-    /* つやのハイライト */
     .ball::after {
       content: '';
       position: absolute;
@@ -294,27 +517,24 @@
       width: 34%;
       height: 24%;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.8);
       filter: blur(1px);
       transform: rotate(-30deg);
     }
 
-    .ball.red    { --c1: #ffb3c1; --c2: #ff4d6d; --c3: #b3123b; --glow: rgba(255, 77, 109, 0.55); }
-    .ball.blue   { --c1: #b5d4ff; --c2: #3b82f6; --c3: #1e3a8a; --glow: rgba(59, 130, 246, 0.55); }
-    .ball.green  { --c1: #b8f7d4; --c2: #22c55e; --c3: #0f6b34; --glow: rgba(34, 197, 94, 0.5); }
-    .ball.yellow { --c1: #fff3b0; --c2: #fbbf24; --c3: #b45309; --glow: rgba(251, 191, 36, 0.5); }
-    .ball.purple { --c1: #e9c8ff; --c2: #a855f7; --c3: #5b1a99; --glow: rgba(168, 85, 247, 0.55); }
+    .ball.red    { --c1: #ffc2cf; --c2: #ff3d68; --c3: #9e0730; --glow: rgba(255, 61, 104, 0.7); }
+    .ball.blue   { --c1: #c4e3ff; --c2: #2f86ff; --c3: #0b2f80; --glow: rgba(47, 134, 255, 0.7); }
+    .ball.green  { --c1: #c6ffe0; --c2: #19d36b; --c3: #06612f; --glow: rgba(25, 211, 107, 0.6); }
+    .ball.yellow { --c1: #fff6c2; --c2: #ffc21a; --c3: #a35a00; --glow: rgba(255, 194, 26, 0.7); }
+    .ball.purple { --c1: #f0d4ff; --c2: #b04dff; --c3: #4f0f8f; --glow: rgba(176, 77, 255, 0.7); }
 
-    .cell.selected .ball {
-      animation: hop 0.7s ease-in-out infinite;
-    }
+    .cell.selected .ball { animation: hop 0.6s ease-in-out infinite; }
 
     @keyframes hop {
-      0%, 100% { transform: translateY(0) scale(1.04); }
-      50% { transform: translateY(-12%) scale(1.04); }
+      0%, 100% { transform: translateY(0) scale(1.06); }
+      50% { transform: translateY(-14%) scale(1.06); }
     }
 
-    /* 移動中のボール */
     .ball.moving {
       position: fixed;
       z-index: 1000;
@@ -322,15 +542,26 @@
       transition: left 0.08s linear, top 0.08s linear;
     }
 
-    /* 弾けるエフェクト */
-    .ball.removing {
-      animation: bubblePop 0.45s cubic-bezier(.3,1.6,.6,1) forwards;
-    }
+    .ball.removing { animation: bubblePop 0.45s cubic-bezier(.3,1.6,.6,1) forwards; }
 
     @keyframes bubblePop {
       0% { transform: scale(1); opacity: 1; }
-      35% { transform: scale(1.3); opacity: 1; filter: brightness(1.4); }
+      35% { transform: scale(1.35); opacity: 1; filter: brightness(1.6); }
       100% { transform: scale(0); opacity: 0; }
+    }
+
+    .ball.trail {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      animation: fadeTrail 0.4s ease-out forwards;
+    }
+
+    .ball.trail::after { display: none; }
+
+    @keyframes fadeTrail {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(0.2); opacity: 0; }
     }
 
     .pop-bubble {
@@ -338,7 +569,7 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      border: 1.5px solid rgba(255, 255, 255, 0.85);
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
       pointer-events: none;
       z-index: 1001;
       animation: popFloat 0.7s ease-out forwards;
@@ -346,50 +577,161 @@
 
     @keyframes popFloat {
       0% { transform: scale(0.6); opacity: 1; }
-      100% { transform: scale(1.4) translateY(-30px); opacity: 0; }
+      100% { transform: scale(1.5) translateY(-30px); opacity: 0; }
     }
 
+    /* ===== 消去時の演出 ===== */
     .score-pop {
       position: fixed;
-      z-index: 1002;
+      z-index: 1003;
       pointer-events: none;
-      font-weight: 800;
-      font-size: 1.4rem;
-      color: #fff;
-      text-shadow: 0 2px 12px rgba(94, 234, 212, 0.8);
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 1.5rem;
+      color: #fff3c4;
+      -webkit-text-stroke: 1px #6b3a00;
+      text-shadow: 0 0 12px rgba(255, 200, 60, 0.9);
       transform: translate(-50%, -50%);
-      animation: scorePop 0.9s ease-out forwards;
+      animation: scorePop 1s ease-out forwards;
     }
 
     @keyframes scorePop {
-      0% { opacity: 0; transform: translate(-50%, -30%) scale(0.6); }
-      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-      100% { opacity: 0; transform: translate(-50%, -160%) scale(1); }
+      0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -170%) scale(1); }
     }
 
-    /* 軌跡 */
-    .ball.trail {
+    .fx-banner {
       position: fixed;
+      z-index: 1002;
       pointer-events: none;
-      z-index: 999;
-      opacity: 0.5;
-      animation: fadeTrail 0.4s ease-out forwards;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .ball.trail::after { display: none; }
-
-    @keyframes fadeTrail {
-      0% { transform: scale(1); opacity: 0.5; }
-      100% { transform: scale(0.2); opacity: 0; }
+    .burst {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 340px;
+      height: 340px;
+      margin: -170px 0 0 -170px;
+      border-radius: 50%;
+      background: repeating-conic-gradient(rgba(255, 230, 130, 0.55) 0deg 8deg, transparent 8deg 20deg);
+      -webkit-mask: radial-gradient(circle, #000 15%, transparent 68%);
+      mask: radial-gradient(circle, #000 15%, transparent 68%);
+      animation: burst 1.2s ease-out forwards;
     }
 
-    /* 下部ボタン */
-    .buttons {
-      width: var(--board);
-      margin-top: 16px;
+    @keyframes burst {
+      0% { transform: scale(0.2) rotate(0deg); opacity: 0; }
+      20% { opacity: 1; }
+      100% { transform: scale(1.3) rotate(60deg); opacity: 0; }
+    }
+
+    .fx-text {
+      position: relative;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 3rem;
+      white-space: nowrap;
+      background: linear-gradient(180deg, #fffbe6 0%, #ffe066 40%, #e0a10e 60%, #fff1a8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 2px #5a2a00;
+      filter: drop-shadow(0 4px 0 #3a1500) drop-shadow(0 0 16px rgba(255, 180, 40, 0.9));
+      animation: cutIn 1.2s cubic-bezier(.2,1.4,.4,1) forwards;
+    }
+
+    .fx-sub {
+      position: relative;
+      margin-top: 4px;
+      padding: 2px 14px;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 1.1rem;
+      color: #fff;
+      background: linear-gradient(180deg, #ff4d7a, #c0063a);
+      border: 2px solid #ffe066;
+      border-radius: 6px;
+      animation: cutIn 1.2s cubic-bezier(.2,1.4,.4,1) 0.08s backwards, fadeOut 1.2s forwards;
+    }
+
+    @keyframes cutIn {
+      0% { transform: scale(2.6); opacity: 0; }
+      18% { transform: scale(1); opacity: 1; }
+      75% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.1); opacity: 0; }
+    }
+
+    @keyframes fadeOut {
+      75% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .fx-banner.fever .fx-text {
+      font-size: 2.3rem;
+      background: linear-gradient(90deg, #ff6fb5, #ffe066, #5ff3ff, #b47bff, #ff6fb5);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: cutIn 2s cubic-bezier(.2,1.4,.4,1) forwards, rainbow 0.6s linear infinite;
+    }
+
+    .fx-banner.fever .burst {
+      width: 520px;
+      height: 520px;
+      margin: -260px 0 0 -260px;
+      background: repeating-conic-gradient(rgba(255, 120, 200, 0.6) 0deg 6deg, rgba(255, 240, 140, 0.6) 6deg 12deg, transparent 12deg 20deg);
+      animation-duration: 2s;
+    }
+
+    @keyframes rainbow {
+      to { background-position: 200% 0; }
+    }
+
+    .flash {
+      position: fixed;
+      inset: 0;
+      z-index: 1001;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 200, 240, 0.4) 60%, transparent);
+      animation: flash 0.6s ease-out forwards;
+    }
+
+    @keyframes flash {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    .pearl {
+      position: fixed;
+      top: -20px;
+      z-index: 1001;
+      pointer-events: none;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe9f4 40%, #d6a8d0 100%);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+      animation: pearlFall linear forwards;
+    }
+
+    .pearl.gold {
+      background: radial-gradient(circle at 35% 30%, #fffbe0 0%, #ffd34d 45%, #a86a00 100%);
+      box-shadow: 0 0 8px rgba(255, 200, 60, 0.9);
+    }
+
+    @keyframes pearlFall {
+      to { transform: translateY(110vh) rotate(360deg); }
+    }
+
+    /* ===== 下のボタン（スロットのボタン風） ===== */
+    .controls {
+      width: var(--frame);
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
+      flex-shrink: 0;
+      padding-bottom: 5px;
     }
 
     button {
@@ -397,58 +739,62 @@
       cursor: pointer;
     }
 
-    .pill-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 13px 16px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 0.9rem;
-      font-weight: 600;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: background 0.2s, transform 0.1s;
+    .slot-btn {
+      height: 50px;
+      border-radius: 999px;
+      border: 2px solid #ffe08a;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      color: #fff;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+      transition: transform 0.06s, box-shadow 0.06s;
     }
 
-    .pill-btn:hover { background: var(--surface-strong); }
-    .pill-btn:active { transform: scale(0.97); }
-    .pill-btn svg { width: 18px; height: 18px; }
+    .slot-btn.red {
+      background: linear-gradient(180deg, #ff8aa5 0%, #f0204f 50%, #b5002e 100%);
+      box-shadow: 0 5px 0 #6e0019, 0 8px 16px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.5);
+    }
 
-    .retire-btn { color: var(--danger); }
+    .slot-btn.blue {
+      background: linear-gradient(180deg, #8ad8ff 0%, #1f8fe0 50%, #0a4fa0 100%);
+      box-shadow: 0 5px 0 #062d5e, 0 8px 16px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.5);
+    }
+
+    .slot-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+    }
 
     .primary-btn {
       display: block;
       width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: var(--radius-md);
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #0a0f1f;
-      font-size: 1rem;
-      font-weight: 800;
-      box-shadow: 0 10px 30px -10px rgba(129, 140, 248, 0.7);
-      transition: transform 0.1s, filter 0.2s;
+      height: 52px;
+      border: 2px solid #ffe08a;
+      border-radius: 999px;
+      background: linear-gradient(180deg, #ffe58a 0%, #f2b705 50%, #c07800 100%);
+      color: #4a2600;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 1.05rem;
+      box-shadow: 0 5px 0 #6b3a00, 0 8px 16px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.6);
     }
 
-    .primary-btn:hover { filter: brightness(1.08); }
-    .primary-btn:active { transform: scale(0.98); }
+    .primary-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 1px 0 #6b3a00;
+    }
 
-    /* モーダル共通（スマホでは下から出るシート） */
+    /* ===== モーダル（下から出るシート） ===== */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(5, 8, 20, 0.6);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: rgba(2, 10, 26, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
       display: none;
       justify-content: center;
-      align-items: center;
+      align-items: flex-end;
       z-index: 200;
-      padding: 16px;
     }
 
     .modal-overlay.show {
@@ -463,61 +809,50 @@
 
     .modal,
     .message {
-      background: rgba(20, 26, 48, 0.92);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
       color: var(--text);
+      border: 2px solid transparent;
+      background: var(--panel) padding-box, var(--gold-metal) border-box;
+      box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 190, 60, 0.25);
     }
 
     .modal {
       width: 100%;
-      max-width: 380px;
+      max-width: 440px;
       max-height: 85vh;
       overflow-y: auto;
-      padding: 28px 24px 24px;
+      border-bottom: none;
+      border-radius: 26px 26px 0 0;
+      padding: 14px 20px max(20px, env(safe-area-inset-bottom));
       animation: sheetUp 0.35s cubic-bezier(.2,.9,.3,1.1);
     }
 
-    @keyframes sheetUp {
-      from { transform: translateY(30px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    .modal::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 233, 168, 0.4);
+      margin: 0 auto 14px;
     }
 
-    @media (max-width: 480px) {
-      .modal-overlay {
-        align-items: flex-end;
-        padding: 0;
-      }
-
-      .modal {
-        max-width: none;
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-        padding-bottom: max(24px, env(safe-area-inset-bottom));
-      }
-
-      .modal::before {
-        content: '';
-        display: block;
-        width: 40px;
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.2);
-        margin: -14px auto 18px;
-      }
+    @keyframes sheetUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
     }
 
     .modal h2 {
-      font-size: 1.3rem;
-      font-weight: 800;
-      margin-bottom: 18px;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-weight: 400;
+      font-size: 1.35rem;
+      text-align: center;
+      color: var(--gold-light);
+      margin-bottom: 16px;
     }
 
     .modal ul {
       list-style: none;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
       display: grid;
       gap: 10px;
     }
@@ -529,25 +864,23 @@
       font-family: 'Zen Maru Gothic', sans-serif;
       font-size: 0.92rem;
       line-height: 1.6;
-      color: rgba(238, 242, 255, 0.85);
     }
 
     .rules li .num {
       flex-shrink: 0;
       width: 24px;
       height: 24px;
-      border-radius: 8px;
-      background: var(--surface-strong);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff 0%, #ffe9f4 40%, #d6a8d0 100%);
+      color: #5a2a50;
       display: grid;
       place-items: center;
       font-family: 'Outfit', sans-serif;
       font-size: 0.75rem;
       font-weight: 800;
-      color: var(--accent);
       margin-top: 1px;
     }
 
-    /* ランキング */
     .ranking-content {
       max-height: 50vh;
       overflow-y: auto;
@@ -567,22 +900,20 @@
       padding: 24px 0;
     }
 
-    .ranking-list {
-      display: grid;
-      gap: 6px;
-    }
+    .ranking-list { display: grid; gap: 6px; }
 
     .ranking-item {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 10px 12px;
-      border-radius: 14px;
-      background: var(--surface);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .ranking-item:nth-child(-n+3) {
-      background: var(--surface-strong);
+      background: linear-gradient(90deg, rgba(255, 210, 90, 0.18), rgba(255, 255, 255, 0.04));
+      border: 1px solid rgba(255, 210, 90, 0.3);
     }
 
     .ranking-rank {
@@ -597,10 +928,7 @@
     .ranking-rank.silver,
     .ranking-rank.bronze { font-size: 1.2rem; }
 
-    .ranking-info {
-      flex: 1;
-      min-width: 0;
-    }
+    .ranking-info { flex: 1; min-width: 0; }
 
     .ranking-name {
       font-family: 'Zen Maru Gothic', sans-serif;
@@ -619,12 +947,13 @@
     .ranking-score {
       font-weight: 800;
       font-size: 1.05rem;
-      color: var(--accent);
+      color: #fff3c4;
+      text-shadow: 0 0 8px rgba(255, 200, 60, 0.6);
       font-variant-numeric: tabular-nums;
       flex-shrink: 0;
     }
 
-    /* ゲームオーバー */
+    /* ===== ゲームオーバー ===== */
     .message {
       position: fixed;
       top: 50%;
@@ -632,7 +961,8 @@
       transform: translate(-50%, -50%);
       width: calc(100% - 32px);
       max-width: 360px;
-      padding: 32px 24px 24px;
+      padding: 28px 20px 22px;
+      border-radius: 24px;
       text-align: center;
       display: none;
       z-index: 100;
@@ -640,32 +970,42 @@
 
     .message.show {
       display: block;
-      animation: popIn 0.4s cubic-bezier(.2,.9,.3,1.2);
-      box-shadow: 0 0 0 100vmax rgba(5, 8, 20, 0.65), 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+      animation: popIn 0.45s cubic-bezier(.2,.9,.3,1.3);
+      box-shadow: 0 0 0 100vmax rgba(2, 10, 26, 0.7), 0 0 40px rgba(255, 190, 60, 0.35);
     }
 
     @keyframes popIn {
-      from { transform: translate(-50%, -45%) scale(0.9); opacity: 0; }
+      from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
       to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
 
     .message h2 {
+      font-family: 'Dela Gothic One', sans-serif;
+      font-weight: 400;
+      font-size: 1.7rem;
+      color: #ffd1dc;
+      -webkit-text-stroke: 1px #6e0019;
+      text-shadow: 0 3px 0 #6e0019, 0 0 14px rgba(255, 80, 120, 0.6);
+    }
+
+    .message-sub {
+      font-family: 'Zen Maru Gothic', sans-serif;
       font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.2em;
       color: var(--text-dim);
-      margin-bottom: 8px;
+      margin: 6px 0 14px;
     }
 
     .final-score {
-      font-size: 4rem;
-      font-weight: 800;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 3.6rem;
       line-height: 1;
-      margin-bottom: 24px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #fffbe6 0%, #ffe066 40%, #e0a10e 60%, #fff1a8 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+      -webkit-text-stroke: 1.5px #5a2a00;
+      filter: drop-shadow(0 0 14px rgba(255, 180, 40, 0.7));
     }
 
     .score-form {
@@ -677,10 +1017,11 @@
     .score-form input {
       flex: 1;
       min-width: 0;
-      padding: 12px 14px;
+      height: 46px;
+      padding: 0 14px;
       border-radius: 12px;
-      border: 1px solid var(--line);
-      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 215, 120, 0.4);
+      background: rgba(0, 0, 0, 0.3);
       color: var(--text);
       font-family: 'Zen Maru Gothic', sans-serif;
       font-size: 16px;
@@ -690,17 +1031,17 @@
 
     .score-form input:focus {
       outline: none;
-      border-color: var(--accent);
+      border-color: var(--gold);
     }
 
     .submit-btn {
-      padding: 0 16px;
+      padding: 0 18px;
       border: none;
       border-radius: 12px;
-      background: var(--text);
-      color: var(--bg);
-      font-weight: 800;
-      font-size: 0.85rem;
+      background: linear-gradient(180deg, #ff8aa5, #e0164a);
+      color: #fff;
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 0.9rem;
       white-space: nowrap;
     }
 
@@ -723,68 +1064,240 @@
       margin-bottom: 14px;
     }
 
-    .submit-status.success { color: var(--accent); }
+    .submit-status.success { color: #5ff3ff; }
     .submit-status.error { color: var(--danger); }
 
     @media (prefers-reduced-motion: reduce) {
-      .aurora::before, .aurora::after, .bubble-bg { animation: none; }
-      .bubble-bg { display: none; }
+      .rays i, .sway, .fish, .bubble-bg, .mermaid, .palace-glow { animation: none; }
+      .fish, .bubble-bg { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="aurora"></div>
+  <!-- 海の背景 -->
+  <div class="scene" aria-hidden="true">
+    <div class="rays"><i></i><i></i><i></i><i></i></div>
 
-  <!-- 背景の泡 -->
-  <div class="bubble-bg" style="left: 8%; animation-delay: 0s; width: 14px; height: 14px;"></div>
-  <div class="bubble-bg" style="left: 22%; animation-delay: 4s; width: 24px; height: 24px;"></div>
-  <div class="bubble-bg" style="left: 47%; animation-delay: 7s; width: 10px; height: 10px;"></div>
-  <div class="bubble-bg" style="left: 70%; animation-delay: 2s; width: 20px; height: 20px;"></div>
-  <div class="bubble-bg" style="left: 88%; animation-delay: 9s; width: 12px; height: 12px;"></div>
+    <svg class="fish f1" viewBox="0 0 40 20"><path d="M2 10 Q12 0 26 6 L37 0 L34 10 L37 20 L26 14 Q12 20 2 10Z"/></svg>
+    <svg class="fish f2" viewBox="0 0 40 20"><path d="M2 10 Q12 0 26 6 L37 0 L34 10 L37 20 L26 14 Q12 20 2 10Z"/></svg>
+    <svg class="fish f3" viewBox="0 0 40 20"><path d="M2 10 Q12 0 26 6 L37 0 L34 10 L37 20 L26 14 Q12 20 2 10Z"/></svg>
 
-  <header class="topbar">
-    <button class="icon-btn" id="backBtn" aria-label="戻る">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <span class="brand">Bubble Lines</span>
-    <div class="topbar-actions">
+    <!-- 海藻 -->
+    <svg class="reef reef-left" viewBox="0 0 140 320" preserveAspectRatio="xMinYMax meet">
+      <defs>
+        <linearGradient id="weed" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stop-color="#0d5a3a"/>
+          <stop offset="1" stop-color="#37c47a"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#weed)" stroke-linecap="round">
+        <path class="sway" stroke-width="12" d="M22 320 C 5 260, 40 215, 20 160 S 38 70, 26 14"/>
+        <path class="sway" stroke-width="10" d="M58 320 C 74 268, 36 218, 58 168 S 42 104, 62 56"/>
+        <path class="sway" stroke-width="9" d="M96 320 C 84 276, 110 236, 94 190 S 104 128, 98 100"/>
+      </g>
+      <ellipse cx="60" cy="318" rx="80" ry="14" fill="#2a3f5e"/>
+    </svg>
+
+    <!-- 珊瑚と真珠貝 -->
+    <svg class="reef reef-right" viewBox="0 0 170 320" preserveAspectRatio="xMaxYMax meet">
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <g class="sway" stroke="#ff6f91" stroke-width="10">
+          <path d="M100 320 L100 230 M100 250 C80 230 70 200 65 170 M100 240 C120 220 130 190 138 160 M65 170 C60 150 50 140 42 120 M65 182 C75 162 82 148 86 130 M138 160 C145 140 155 130 160 110 M138 175 C128 155 120 144 116 126"/>
+        </g>
+        <g class="sway" stroke="#ffa94d" stroke-width="7">
+          <path d="M40 320 L40 270 M40 285 C28 270 24 252 20 236 M40 278 C52 262 58 248 60 230"/>
+        </g>
+      </g>
+      <!-- 真珠貝 -->
+      <path d="M70 312 C70 286 130 286 130 312 Z" fill="#c9a0c0" stroke="#7a4f72" stroke-width="2"/>
+      <circle cx="100" cy="303" r="8" fill="#fff" opacity="0.95">
+        <animate attributeName="opacity" values="0.7;1;0.7" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+      <ellipse cx="90" cy="318" rx="90" ry="12" fill="#2a3f5e"/>
+    </svg>
+
+    <div class="bubble-bg" style="left: 6%; animation-delay: 0s; width: 12px; height: 12px;"></div>
+    <div class="bubble-bg" style="left: 18%; animation-delay: 3s; width: 20px; height: 20px;"></div>
+    <div class="bubble-bg" style="left: 40%; animation-delay: 6s; width: 9px; height: 9px;"></div>
+    <div class="bubble-bg" style="left: 63%; animation-delay: 1.5s; width: 16px; height: 16px;"></div>
+    <div class="bubble-bg" style="left: 82%; animation-delay: 8s; width: 11px; height: 11px;"></div>
+    <div class="bubble-bg" style="left: 93%; animation-delay: 4.5s; width: 18px; height: 18px;"></div>
+  </div>
+
+  <main class="app">
+    <!-- 上パネル：竜宮城 -->
+    <header class="stage">
+      <button class="icon-btn" id="backBtn" aria-label="戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
       <button class="icon-btn" id="helpBtn" aria-label="ルール">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 1c0 1.7-2.5 2.3-2.5 3.8"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 1c0 1.7-2.5 2.3-2.5 3.8"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>
       </button>
       <button class="icon-btn" id="rankingBtn" aria-label="ランキング">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
       </button>
+
+      <svg class="stage-art" viewBox="0 0 400 210" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs>
+          <radialGradient id="pGlow">
+            <stop offset="0" stop-color="#ffe7a0" stop-opacity="0.95"/>
+            <stop offset="0.45" stop-color="#ff9ec8" stop-opacity="0.35"/>
+            <stop offset="1" stop-color="#ff9ec8" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="pRoof" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4ff0d2"/>
+            <stop offset="1" stop-color="#0a6a6e"/>
+          </linearGradient>
+          <linearGradient id="pRed" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ff5a3c"/>
+            <stop offset="1" stop-color="#a3101c"/>
+          </linearGradient>
+          <linearGradient id="pGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fff1a8"/>
+            <stop offset="0.5" stop-color="#e0a520"/>
+            <stop offset="1" stop-color="#8a5a00"/>
+          </linearGradient>
+          <linearGradient id="pStone" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#4b6e93"/>
+            <stop offset="1" stop-color="#1c3150"/>
+          </linearGradient>
+          <linearGradient id="mGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffe3c4"/>
+            <stop offset="0.45" stop-color="#ffb3d1"/>
+            <stop offset="0.6" stop-color="#55e6d6"/>
+            <stop offset="1" stop-color="#8a6dff"/>
+          </linearGradient>
+          <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <!-- 反り屋根 -->
+          <symbol id="roof" viewBox="0 0 100 26">
+            <path d="M2 22 Q14 21 22 15 L50 2 L78 15 Q86 21 98 22 L96 25 Q84 25 76 20 L24 20 Q16 25 4 25 Z" fill="url(#pRoof)" stroke="url(#pGold)" stroke-width="1.6"/>
+            <circle cx="50" cy="3" r="2.2" fill="#ffe066"/>
+          </symbol>
+          <!-- 人魚（シルエット） -->
+          <symbol id="mermaid" viewBox="0 0 60 122">
+            <path d="M28 6 C18 4 10 14 12 26 C13 36 6 42 2 52 C12 50 18 42 21 33 C23 25 25 19 31 17 Z" fill="#ffcf7a"/>
+            <circle cx="31" cy="13" r="7" fill="url(#mGrad)"/>
+            <path d="M27 19 C25 26 24 32 25 40 C26 46 27 50 26 56 L38 56 C37 50 38 44 38 38 C38 30 36 24 35 19 Z" fill="url(#mGrad)"/>
+            <path d="M35 24 C42 20 46 14 48 7" fill="none" stroke="#ffe3c4" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M27 26 C22 32 20 38 21 44" fill="none" stroke="#ffe3c4" stroke-width="3.2" stroke-linecap="round"/>
+            <path d="M26 56 C23 70 25 82 31 92 C35 98 37 103 36 108 L40 107 C42 99 42 91 40 83 C38 73 39 64 38 56 Z" fill="url(#mGrad)"/>
+            <path d="M36 106 C28 111 22 117 15 119 C24 122 32 119 37 114 C42 119 50 122 58 119 C50 116 44 111 40 105 Z" fill="#8a6dff"/>
+            <circle cx="49" cy="5" r="4" fill="#fff" filter="url(#soft)"/>
+          </symbol>
+        </defs>
+
+        <ellipse class="palace-glow" cx="200" cy="110" rx="200" ry="105" fill="url(#pGlow)"/>
+
+        <!-- 人魚 -->
+        <g class="mermaid"><use href="#mermaid" x="6" y="36" width="54" height="110"/></g>
+        <g transform="translate(400 0) scale(-1 1)"><g class="mermaid right"><use href="#mermaid" x="6" y="36" width="54" height="110"/></g></g>
+
+        <!-- 左右の殿 -->
+        <rect x="64" y="142" width="74" height="34" fill="url(#pRed)"/>
+        <rect x="72" y="150" width="13" height="14" rx="2" fill="#ffe9a0"/>
+        <rect x="94" y="150" width="13" height="14" rx="2" fill="#ffe9a0"/>
+        <rect x="116" y="150" width="13" height="14" rx="2" fill="#ffe9a0"/>
+        <use href="#roof" x="50" y="122" width="100" height="26"/>
+
+        <rect x="262" y="142" width="74" height="34" fill="url(#pRed)"/>
+        <rect x="271" y="150" width="13" height="14" rx="2" fill="#ffe9a0"/>
+        <rect x="293" y="150" width="13" height="14" rx="2" fill="#ffe9a0"/>
+        <rect x="315" y="150" width="13" height="14" rx="2" fill="#ffe9a0"/>
+        <use href="#roof" x="250" y="122" width="100" height="26"/>
+
+        <!-- 本殿 1層目 -->
+        <rect x="138" y="154" width="124" height="22" fill="#8a0e18"/>
+        <rect x="150" y="126" width="100" height="50" fill="url(#pRed)"/>
+        <rect x="158" y="134" width="12" height="16" rx="2" fill="#ffe9a0"/>
+        <rect x="230" y="134" width="12" height="16" rx="2" fill="#ffe9a0"/>
+        <path d="M186 176 L186 152 Q200 136 214 152 L214 176 Z" fill="#3a0a10" stroke="url(#pGold)" stroke-width="2.5"/>
+        <use href="#roof" x="130" y="106" width="140" height="30"/>
+
+        <!-- 2層目 -->
+        <rect x="166" y="90" width="68" height="22" fill="url(#pRed)"/>
+        <rect x="176" y="95" width="10" height="12" rx="2" fill="#ffe9a0"/>
+        <rect x="195" y="95" width="10" height="12" rx="2" fill="#ffe9a0"/>
+        <rect x="214" y="95" width="10" height="12" rx="2" fill="#ffe9a0"/>
+        <use href="#roof" x="150" y="72" width="100" height="26"/>
+
+        <!-- 3層目 -->
+        <rect x="180" y="58" width="40" height="18" fill="url(#pRed)"/>
+        <rect x="194" y="61" width="12" height="11" rx="2" fill="#ffe9a0"/>
+        <use href="#roof" x="166" y="40" width="68" height="22"/>
+
+        <!-- 宝珠 -->
+        <rect x="198.5" y="20" width="3" height="24" fill="url(#pGold)"/>
+        <ellipse cx="200" cy="34" rx="6" ry="2" fill="url(#pGold)"/>
+        <circle cx="200" cy="15" r="7" fill="#fff" filter="url(#soft)">
+          <animate attributeName="r" values="6;7.5;6" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- 灯籠 -->
+        <g fill="#ffb347" filter="url(#soft)">
+          <circle cx="140" cy="132" r="3.5"/>
+          <circle cx="260" cy="132" r="3.5"/>
+          <circle cx="56" cy="146" r="3"/>
+          <circle cx="344" cy="146" r="3"/>
+        </g>
+
+        <!-- 基壇と階段 -->
+        <path d="M36 176 L364 176 L376 192 L24 192 Z" fill="url(#pStone)"/>
+        <path d="M36 176 L364 176" stroke="url(#pGold)" stroke-width="2"/>
+        <rect x="180" y="176" width="40" height="5" fill="#5f84ab"/>
+        <rect x="174" y="181" width="52" height="5" fill="#557a9f"/>
+        <rect x="168" y="186" width="64" height="6" fill="#4b6e93"/>
+      </svg>
+
+      <div class="logo">
+        <div class="logo-title">Bubble Lines</div>
+        <div class="logo-sub">竜宮城の宝玉</div>
+      </div>
+    </header>
+
+    <!-- スコア -->
+    <section class="hud">
+      <div class="counter">
+        <div class="counter-row">
+          <span class="label">SCORE</span>
+          <strong class="score-value" id="score">0</strong>
+        </div>
+        <div class="meter">
+          <div class="fill-track"><div class="fill-bar" id="fillBar"></div></div>
+          <span>空き <strong id="empty">78</strong></span>
+        </div>
+      </div>
+      <div class="next">
+        <span class="label">NEXT</span>
+        <span id="nextBalls"></span>
+      </div>
+    </section>
+
+    <!-- 盤面 -->
+    <div class="frame" id="frame">
+      <div class="lights" id="lights"></div>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <svg class="crest" viewBox="0 0 60 34" aria-hidden="true">
+        <path d="M30 32 L6 14 Q8 4 18 2 Q30 -2 42 2 Q52 4 54 14 Z" fill="url(#pGold)" stroke="#5a3a00" stroke-width="1.5"/>
+        <g stroke="#7a5200" stroke-width="1.2" fill="none">
+          <path d="M30 31 L12 9"/><path d="M30 31 L21 4"/><path d="M30 31 L30 2"/><path d="M30 31 L39 4"/><path d="M30 31 L48 9"/>
+        </g>
+        <circle cx="30" cy="26" r="5" fill="#fff" stroke="#c9a3c9"/>
+      </svg>
+      <div class="board" id="board"></div>
     </div>
-  </header>
 
-  <div class="hud">
-    <div>
-      <div class="label">Score</div>
-      <strong class="score-value" id="score">0</strong>
+    <!-- 操作ボタン -->
+    <div class="controls">
+      <button class="slot-btn red" id="retireBtn">リタイア</button>
+      <button class="slot-btn blue" id="resetBtn">リセット</button>
     </div>
-    <div class="next-balls">
-      <div class="label">Next</div>
-      <span id="nextBalls"></span>
-    </div>
-  </div>
-
-  <div class="fill-meter">
-    <div class="fill-track"><div class="fill-bar" id="fillBar"></div></div>
-    <span>空き <strong id="empty">78</strong></span>
-  </div>
-
-  <div class="board" id="board"></div>
-
-  <div class="buttons">
-    <button class="pill-btn retire-btn" id="retireBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
-      リタイア
-    </button>
-    <button class="pill-btn" id="resetBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-      リセット
-    </button>
-  </div>
+  </main>
 
   <!-- ルール説明モーダル -->
   <div class="modal-overlay" id="rulesModal">
@@ -815,6 +1328,7 @@
 
   <div class="message" id="message">
     <h2>GAME OVER</h2>
+    <p class="message-sub">竜宮城の扉が閉じました…</p>
     <p class="final-score" id="finalScore">0</p>
     <div id="scoreForm" class="score-form">
       <input type="text" id="playerName" placeholder="名前を入力" maxlength="20">
@@ -877,7 +1391,10 @@
 
     // 効果音
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
+
+    // iPhone では最初のタップまで音が鳴らないため、そこで再開する
+    document.addEventListener('pointerdown', () => audioCtx.resume(), { once: true });
+
     function playSound(type) {
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
@@ -909,6 +1426,31 @@
           osc.stop(audioCtx.currentTime + i * 0.05 + 0.15);
         }
         return;
+      } else if (type === 'fever') {
+        // フィーバーのファンファーレ（駆け上がる和音）
+        const notes = [523, 659, 784, 1047, 1319, 1568];
+        notes.forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          const t = audioCtx.currentTime + 0.25 + i * 0.07;
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.12, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+          osc.start(t);
+          osc.stop(t + 0.35);
+        });
+        return;
+      } else if (type === 'blocked') {
+        // 行けないマスをタップしたときの短いブザー
+        oscillator.frequency.setValueAtTime(140, audioCtx.currentTime);
+        oscillator.type = 'square';
+        gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.12);
       } else if (type === 'gameover') {
         // 深海に沈む音
         oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
@@ -927,7 +1469,8 @@
       selectedCell = null;
       score = 0;
       turnCount = 0;
-      
+      clearStreak = 0;
+
       // 次に出るボールを決める
       nextBalls = generateNextBalls();
       
@@ -1165,6 +1708,13 @@
           
           // 移動アニメーション実行
           animateMove(fromR, fromC, r, c, color, path);
+        } else {
+          // 道がつながっていないことを知らせる
+          const cellEl = document.getElementById('board').children[r * SIZE + c];
+          cellEl.classList.remove('blocked');
+          void cellEl.offsetWidth;
+          cellEl.classList.add('blocked');
+          playSound('blocked');
         }
       }
     }
@@ -1232,6 +1782,7 @@
           
           // ラインが消えなかった場合のみ新しいボールを追加
           if (!cleared) {
+            clearStreak = 0;
             setTimeout(() => {
               addBallsWithAnimation();
             }, 100);
@@ -1528,7 +2079,9 @@
         scorePop.style.left = (sumX / toRemove.size) + 'px';
         scorePop.style.top = (sumY / toRemove.size) + 'px';
         document.body.appendChild(scorePop);
-        setTimeout(() => scorePop.remove(), 900);
+        setTimeout(() => scorePop.remove(), 1000);
+
+        celebrate(toRemove.size);
 
         // アニメーション後に実際に削除
         setTimeout(() => {
@@ -1570,7 +2123,81 @@
       const fillBar = document.getElementById('fillBar');
       fillBar.style.width = ((SIZE * SIZE - empty) / (SIZE * SIZE) * 100) + '%';
       fillBar.classList.toggle('danger', empty <= 15);
+      document.getElementById('frame').classList.toggle('danger', empty <= 15);
     }
+
+    // 消去時の演出（消した数と連続回数で派手さを変える）
+    let clearStreak = 0;
+
+    function celebrate(count) {
+      clearStreak++;
+      const fever = count >= 8 || clearStreak >= 3;
+      const title = fever ? '竜宮フィーバー!!' : count >= 6 ? 'GREAT!' : 'NICE!';
+      const sub = clearStreak >= 2 ? `${clearStreak}連続!` : '';
+
+      const boardRect = document.getElementById('board').getBoundingClientRect();
+      const banner = document.createElement('div');
+      banner.className = 'fx-banner' + (fever ? ' fever' : '');
+      banner.style.left = (boardRect.left + boardRect.width / 2) + 'px';
+      banner.style.top = (boardRect.top + boardRect.height / 2) + 'px';
+      banner.innerHTML = `<div class="burst"></div><div class="fx-text">${title}</div>` +
+        (sub ? `<div class="fx-sub">${sub}</div>` : '');
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), fever ? 2000 : 1200);
+
+      if (navigator.vibrate) navigator.vibrate(fever ? [40, 40, 90] : 25);
+
+      if (!fever) return;
+
+      const frame = document.getElementById('frame');
+      frame.classList.add('fever');
+      setTimeout(() => frame.classList.remove('fever'), 2500);
+
+      const flash = document.createElement('div');
+      flash.className = 'flash';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 600);
+
+      // 真珠と金貨を降らせる
+      for (let i = 0; i < 36; i++) {
+        const pearl = document.createElement('div');
+        const size = 8 + Math.random() * 12;
+        pearl.className = 'pearl' + (i % 3 === 0 ? ' gold' : '');
+        pearl.style.left = (Math.random() * 100) + 'vw';
+        pearl.style.width = size + 'px';
+        pearl.style.height = size + 'px';
+        pearl.style.animationDuration = (1.4 + Math.random() * 1.2) + 's';
+        pearl.style.animationDelay = (Math.random() * 0.6) + 's';
+        document.body.appendChild(pearl);
+        setTimeout(() => pearl.remove(), 3400);
+      }
+
+      playSound('fever');
+    }
+
+    // 金枠の電飾を並べる（角は丸いので各辺の内側だけに置く）
+    function buildLights() {
+      const lightsEl = document.getElementById('lights');
+      const perSide = 10;
+      const points = [];
+      for (let i = 0; i < perSide; i++) points.push([(i + 0.5) / perSide, 0]);
+      for (let i = 0; i < perSide; i++) points.push([1, (i + 0.5) / perSide]);
+      for (let i = 0; i < perSide; i++) points.push([1 - (i + 0.5) / perSide, 1]);
+      for (let i = 0; i < perSide; i++) points.push([0, 1 - (i + 0.5) / perSide]);
+
+      const colors = ['#ff6fb5', '#5ff3ff', '#ffe066'];
+      points.forEach(([x, y], i) => {
+        const led = document.createElement('i');
+        led.className = 'led';
+        led.style.left = `calc(6px + (100% - 12px) * ${x})`;
+        led.style.top = `calc(6px + (100% - 12px) * ${y})`;
+        led.style.animationDelay = `${-(i / points.length) * 1.6}s`;
+        led.style.setProperty('--led', colors[i % colors.length]);
+        lightsEl.appendChild(led);
+      });
+    }
+
+    buildLights();
 
     // ゲームオーバーチェック
     function checkGameOver() {

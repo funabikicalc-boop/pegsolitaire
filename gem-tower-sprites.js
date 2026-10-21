@@ -23,7 +23,9 @@
     // 扉
     Y: '#b8860b', l: '#ffd34d', L: '#fff3c4', P: '#ff6fc8', I: '#14092a',
     // 泡
-    i: 'rgba(170,230,255,0.38)', j: 'rgba(255,150,225,0.32)'
+    i: 'rgba(170,230,255,0.38)', j: 'rgba(255,150,225,0.32)',
+    // 氷
+    J: '#dff8ff', N: '#9fdcf5', U: '#5cb0d8'
   };
 
   // ===== 主人公 =====
@@ -165,6 +167,46 @@
   ];
   const shiftRow = (row, n) => row.slice(-n) + row.slice(0, -n);
   const WATER_B = WATER.map((row, y) => (y === 0 ? row : shiftRow(row, 3)));
+
+  // ===== 氷の床 =====
+  const ICE = [
+    'JJJJJJJJJJJJJJJU',
+    'JNNNNNNNNNNNNNNU',
+    'JNwwNNNNNNNNNNNU',
+    'JNwNNNNNNNNNNNNU',
+    'JNNNNNNNNNNNNNNU',
+    'JNNNNNNNNNNwNNNU',
+    'JNNNNNNNNNwNNNNU',
+    'JNNNNNNNNwNNNNNU',
+    'JNNNNNNNNNNNNNNU',
+    'JNNNNNNNNNNNNNNU',
+    'JNNwNNNNNNNNNNNU',
+    'JNwNNNNNNNNNNNNU',
+    'JNNNNNNNNNNNNwNU',
+    'JNNNNNNNNNNNwNNU',
+    'JNNNNNNNNNNNNNNU',
+    'UUUUUUUUUUUUUUUU'
+  ];
+
+  // ===== 最短クリアの王冠 =====
+  const CROWN = [
+    '................',
+    '................',
+    '................',
+    '..k....kk....k..',
+    '.kyk..kyyk..kyk.',
+    '.kyyk.kyyk.kyyk.',
+    '.kyyykyyyykyyyk.',
+    '.kyyyyyyyyyyyyk.',
+    '.kyyPyyyyyyPyyk.',
+    '.kyyyyyyyyyyyyk.',
+    '.kYYYYYYYYYYYYk.',
+    '.kkkkkkkkkkkkkk.',
+    '................',
+    '................',
+    '................',
+    '................'
+  ];
 
   // ===== 宝玉（4コマ：きらめきの位置を変える） =====
   const GEM = [
@@ -377,6 +419,8 @@
     floor: [FLOOR],
     'floor-b': [FLOOR_B],
     water: [WATER, WATER_B],
+    ice: [ICE],
+    crown: [CROWN],
     gem: GEM_FRAMES,
     'watcher-up': [watcherFrame('up'), watcherFrame('up', true)],
     'watcher-down': [watcherFrame('down'), watcherFrame('down', true)],

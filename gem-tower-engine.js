@@ -7,7 +7,7 @@
   const BUBBLE_TURNS = 5;
 
   // ステージの地図を状態に変換する
-  //   . 床  # 壁  ~ 水  P 主人公  G 宝玉  B 石のブロック  E 封印の扉
+  //   . 床  # 壁  ~ 水  = 氷の床  P 主人公  G 宝玉  B 石のブロック  E 封印の扉
   //   ^ v < > 見張りの石像（向いている方向を見張る）
   function parse(stage) {
     const rows = stage.map;
@@ -27,6 +27,7 @@
         tiles[i] = '.';
         if (ch === '#') tiles[i] = '#';
         else if (ch === '~') tiles[i] = '~';
+        else if (ch === '=') tiles[i] = '=';
         else if (ch === 'E') { tiles[i] = 'E'; exit = i; }
         else if (ch === 'P') player = { pos: i, dir: 'down' };
         else if (ch === 'G') gems.push(i);
@@ -84,7 +85,8 @@
   // 見張りの視線が届くマス（壁・ブロック・泡・扉・ほかの見張りでさえぎられる）
   function sight(s, w) {
     const cells = [];
-    if (w.bubble > 0) return cells;
+    // noSight はステージ検証用（視線がないと楽になるか比べるため）
+    if (w.bubble > 0 || s.noSight) return cells;
     let cur = next(s, w.pos, w.dir);
     while (cur >= 0) {
       const occ = occupant(s, cur);
@@ -93,6 +95,21 @@
       cur = next(s, cur, w.dir);
     }
     return cells;
+  }
+
+  function collectGem(s, at, events) {
+    s.gems = s.gems.filter(g => g !== at);
+    events.push({ type: 'gem', at });
+    if (s.gems.length === 0) {
+      s.open = true;
+      events.push({ type: 'open', at: s.exit });
+    }
+  }
+
+  function sinkBlock(s, block, at, from, events) {
+    s.blocks = s.blocks.filter(b => b !== block);
+    s.tiles[at] = '.';
+    events.push({ type: 'sink', id: block.id, from, to: at });
   }
 
   // 1手進める。action = { type: 'move' | 'shoot', dir }
@@ -117,32 +134,50 @@
       if (occ === 'block' || occ === 'bubble') {
         const beyond = next(s, to, dir);
         const occB = occupant(s, beyond);
-        const obj = occ === 'block' ? s.blocks.find(b => b.pos === to) : s.watchers.find(w => w.pos === to);
+        const isBlock = occ === 'block';
+        const obj = isBlock ? s.blocks.find(b => b.pos === to) : s.watchers.find(w => w.pos === to);
         if (occB === 'floor') {
           obj.pos = beyond;
-          events.push({ type: 'push', id: obj.id, from: to, to: beyond });
-        } else if (occB === 'water' && occ === 'block') {
+          // 氷の上では、何かにぶつかるまで滑っていく
+          let sank = false;
+          while (s.tiles[obj.pos] === '=') {
+            const nx = next(s, obj.pos, dir);
+            const o = occupant(s, nx);
+            if (o === 'floor') obj.pos = nx;
+            else if (o === 'water' && isBlock) { sinkBlock(s, obj, nx, to, events); sank = true; break; }
+            else break;
+          }
+          if (!sank) events.push({ type: 'push', id: obj.id, from: to, to: obj.pos });
+        } else if (occB === 'water' && isBlock) {
           // ブロックを水に落とすと橋になる
-          s.blocks = s.blocks.filter(b => b !== obj);
-          s.tiles[beyond] = '.';
-          events.push({ type: 'sink', id: obj.id, from: to, to: beyond });
+          sinkBlock(s, obj, beyond, to, events);
         } else {
           return { state: s, acted: false, events: [{ type: 'bump', to }] };
         }
       }
 
-      if (occ === 'gem') {
-        s.gems = s.gems.filter(g => g !== to);
-        events.push({ type: 'gem', at: to });
-        if (s.gems.length === 0) {
-          s.open = true;
-          events.push({ type: 'open', at: s.exit });
+      const from = s.player.pos;
+      s.player.pos = to;
+      if (occ === 'gem') collectGem(s, to, events);
+
+      // 主人公も氷の上では滑る（宝玉は通りがけに拾う）
+      let enteredExit = occ === 'exit';
+      while (!enteredExit && s.tiles[s.player.pos] === '=') {
+        const nx = next(s, s.player.pos, dir);
+        const o = occupant(s, nx);
+        if (o === 'floor' || o === 'gem') {
+          s.player.pos = nx;
+          if (o === 'gem') collectGem(s, nx, events);
+        } else if (o === 'exit' && s.open) {
+          s.player.pos = nx;
+          enteredExit = true;
+        } else {
+          break;
         }
       }
 
-      events.unshift({ type: 'move', from: s.player.pos, to });
-      s.player.pos = to;
-      if (occ === 'exit') {
+      events.unshift({ type: 'move', from, to: s.player.pos });
+      if (enteredExit) {
         s.moves++;
         s.status = 'clear';
         events.push({ type: 'clear' });

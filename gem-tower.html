@@ -235,6 +235,11 @@
       to { transform: translateX(12%); }
     }
 
+    .tile.ice {
+      background: linear-gradient(135deg, #e6fbff 0%, #a8e2f7 45%, #6cc0e6 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    }
+
     /* 封印の扉 */
     .tile.exit { background: #3a2f6e; }
 
@@ -629,6 +634,27 @@
 
     .stars-big .off { color: rgba(255, 255, 255, 0.18); text-shadow: none; }
 
+    .perfect {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #ffe066;
+      text-shadow: 0 0 10px rgba(255, 200, 60, 0.8);
+      animation: perfectIn 0.6s cubic-bezier(.2,1.4,.4,1) both;
+    }
+
+    @keyframes perfectIn {
+      from { transform: scale(2); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .floor-btn .st { display: flex; align-items: center; justify-content: center; gap: 2px; }
+
     .result-moves {
       font-family: var(--font-jp);
       font-weight: 700;
@@ -786,6 +812,7 @@
     .pixel .tile.floor { background: var(--spr-floor) 0 0 / 100% 100%; }
     .pixel .tile.floor.alt { background-image: var(--spr-floor-b); }
     .pixel .tile.wall { background: var(--spr-wall) 0 0 / 100% 100%; }
+    .pixel .tile.ice { background: var(--spr-ice) 0 0 / 100% 100%; box-shadow: none; }
 
     .pixel .tile.water {
       background: var(--spr-water) 0 0 / 200% 100%;
@@ -943,6 +970,7 @@
       <div class="stat">
         <small>手数</small>
         <span id="moveText">0</span>
+        <small id="goalText"></small>
       </div>
     </section>
 
@@ -1042,12 +1070,13 @@
       <div class="modal-body">
         <ul class="rules">
           <li><span class="num">1</span>十字キーかスワイプで動くよ。フロアの宝玉を全部集めると、扉の封印がとけるよ</li>
-          <li><span class="num">2</span>開いた扉に入ればフロアクリア！少ない手数でクリアすると星がふえるよ</li>
+          <li><span class="num">2</span>開いた扉に入ればフロアクリア！少ない手数でクリアすると星がふえるよ。最短手数ぴったりなら王冠がもらえる</li>
           <li><span class="num">3</span>石のブロックは押して動かせる。水に落とすと足場になるよ</li>
-          <li><span class="num">4</span>石像の視線（赤いマス）に入ると見つかってしまう。ブロックで視線をさえぎろう</li>
-          <li><span class="num">5</span>真ん中の「泡」を押してから向きを選ぶと、泡の魔法を撃てるよ。石像を閉じ込めると押して動かせる（5ターンで割れる）</li>
-          <li><span class="num">6</span>失敗しても「1手もどす」で何回でもやり直せるよ</li>
-          <li><span class="num">7</span>フロアをクリアすると次のフロアの「鍵」がもらえるよ。メモしておけば、別の端末でも「フロアをえらぶ」→「鍵を入力する」で続きから遊べる</li>
+          <li><span class="num">4</span>氷の床に乗ると、何かにぶつかるまで滑っていくよ。ブロックも滑る</li>
+          <li><span class="num">5</span>石像の視線（赤いマス）に入ると見つかってしまう。ブロックで視線をさえぎろう</li>
+          <li><span class="num">6</span>真ん中の「泡」を押してから向きを選ぶと、泡の魔法を撃てるよ。石像を閉じ込めると押して動かせる（5ターンで割れる）</li>
+          <li><span class="num">7</span>失敗しても「1手もどす」で何回でもやり直せるよ</li>
+          <li><span class="num">8</span>フロアをクリアすると次のフロアの「鍵」がもらえるよ。メモしておけば、別の端末でも「フロアをえらぶ」→「鍵を入力する」で続きから遊べる</li>
         </ul>
       </div>
       <button class="primary-btn" id="closeRulesBtn">わかった！</button>
@@ -1132,10 +1161,19 @@
       return Math.min(Math.max(top, progress.unlocked || 0), STAGES.length - 1);
     }
 
+    // ★3：最短の1.25倍以内　★2：1.75倍以内　★1：クリア（最短ぴったりなら王冠）
+    function starLimit(par, stars) {
+      return Math.ceil(par * (stars === 3 ? 1.25 : 1.75));
+    }
+
     function starsFor(moves, par) {
-      if (moves <= par) return 3;
-      if (moves <= Math.ceil(par * 1.5)) return 2;
+      if (moves <= starLimit(par, 3)) return 3;
+      if (moves <= starLimit(par, 2)) return 2;
       return 1;
+    }
+
+    function crownHtml(size = 24) {
+      return `<i class="mark" style="width:${size}px;height:${size}px;background-image:var(--spr-crown)" title="最短クリア"></i>`;
     }
 
     function markHtml(id) {
@@ -1268,6 +1306,7 @@
         let cls = 'tile ';
         if (tile === '#') cls += 'wall';
         else if (tile === '~') cls += 'water';
+        else if (tile === '=') cls += 'ice';
         else if (tile === 'E') cls += 'exit' + (state.open ? ' open' : '');
         else if (PIXEL) cls += 'floor' + ((x * 7 + y * 13) % 5 === 0 ? ' alt' : '');
         else cls += 'floor' + ((x + y) % 2 ? ' alt' : '');
@@ -1324,6 +1363,10 @@
       document.getElementById('shotBadge').textContent = state.shots;
       document.getElementById('shotBtn').disabled = state.shots === 0;
       document.getElementById('moveText').textContent = state.moves;
+      const goal = starLimit(STAGES[floor].par, 3);
+      const goalEl = document.getElementById('goalText');
+      goalEl.textContent = `/${goal}`;
+      goalEl.style.color = state.moves > goal ? 'var(--danger)' : '';
       document.getElementById('undoBtn').disabled = history.length === 0;
     }
 
@@ -1352,6 +1395,8 @@
       events.forEach(e => {
         if (e.type === 'move') {
           const p = entityEls.get('player');
+          const dist = Math.abs(e.to - e.from) % state.W + Math.floor(Math.abs(e.to - e.from) / state.W);
+          p.style.transitionDuration = dist > 1 ? `${Math.min(0.4, dist * 0.07)}s` : '';
           p.classList.toggle('step-b');  // 1歩ごとに足を入れかえる
           p.classList.remove('hop');
           void p.offsetWidth;
@@ -1421,6 +1466,9 @@
       const stars = starsFor(state.moves, st.par);
       const best = Math.max(progress.stars[floor] || 0, stars);
       progress.stars[floor] = best;
+      progress.best = progress.best || {};
+      progress.best[floor] = Math.min(progress.best[floor] ?? Infinity, state.moves);
+      const perfect = state.moves === st.par;
       progress.floor = Math.min(floor + 1, STAGES.length - 1);
       saveProgress(progress);
       clearFloorSave();
@@ -1438,7 +1486,8 @@
         showCard(`
           <div class="intro-floor">${floor + 1}F CLEAR</div>
           <div class="stars-big">${starText(stars)}</div>
-          <p class="result-moves">${state.moves}手（星3つは${st.par}手以内）</p>
+          ${perfect ? `<div class="perfect">${crownHtml(30)}最短クリア！${crownHtml(30)}</div>` : ''}
+          <p class="result-moves">${state.moves}手（★3は${starLimit(st.par, 3)}手以内・最短は${st.par}手）</p>
           ${last ? '<p class="intro-hint" style="text-align:center">試作版はここまで！<br>上のフロアは準備中です</p>' : `
             <div class="key-box">
               <span class="label">${floor + 2}F の鍵</span>
@@ -1542,7 +1591,7 @@
         <button class="floor-btn${i === floor ? ' current' : ''}" data-floor="${i}" ${i > max ? 'disabled' : ''}>
           <div class="f">${i + 1}F</div>
           <div class="n">${i > max ? '？？？' : st.name}</div>
-          <div class="st">${starText(progress.stars[i] || 0)}</div>
+          <div class="st">${starText(progress.stars[i] || 0)}${progress.best && progress.best[i] === st.par ? crownHtml(14) : ''}</div>
           ${i > max ? '<div class="no-key">鍵が必要</div>' : st.key ? keyHtml(st.key) : '<div class="no-key">鍵なし</div>'}
         </button>`).join('');
       document.getElementById('floorModal').classList.add('show');

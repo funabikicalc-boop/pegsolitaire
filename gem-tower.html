@@ -649,8 +649,132 @@
       text-align: center;
     }
 
+    /* ===== ドット絵 ===== */
+    .spr {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      image-rendering: pixelated;
+    }
+
+    @keyframes frames2 {
+      0% { background-position: 0 0; }
+      50% { background-position: 100% 0; }
+    }
+
+    @keyframes frames4 {
+      0% { background-position: 0 0; }
+      25% { background-position: 33.333% 0; }
+      50% { background-position: 66.667% 0; }
+      75% { background-position: 100% 0; }
+    }
+
+    @keyframes blinkFrames {
+      0%, 93% { background-position: 0 0; }
+      94%, 100% { background-position: 100% 0; }
+    }
+
+    .pixel .tile { image-rendering: pixelated; }
+    .pixel .tile::before { display: none; }
+    .pixel .tile.floor { background: var(--spr-floor) 0 0 / 100% 100%; }
+    .pixel .tile.floor.alt { background-image: var(--spr-floor-b); }
+    .pixel .tile.wall { background: var(--spr-wall) 0 0 / 100% 100%; }
+
+    .pixel .tile.water {
+      background: var(--spr-water) 0 0 / 200% 100%;
+      animation: frames2 1.2s step-end infinite;
+    }
+
+    .pixel .tile.exit {
+      background: var(--spr-door-sealed) 0 0 / 100% 100%, var(--spr-floor) 0 0 / 100% 100%;
+    }
+
+    .pixel .tile.exit::after { display: none; }
+
+    .pixel .tile.exit.open {
+      background: var(--spr-door-open) 0 0 / 200% 100%, var(--spr-floor) 0 0 / 100% 100%;
+      animation: frames2 0.6s step-end infinite;
+    }
+
+    /* 見張りの視線はドット絵に合わせて格子模様に */
+    .pixel .tile.seen::after {
+      background: repeating-linear-gradient(45deg, rgba(255, 50, 80, 0.32) 0 3px, rgba(255, 50, 80, 0.14) 3px 6px);
+      box-shadow: inset 0 0 0 1px rgba(255, 90, 120, 0.35);
+    }
+
+    /* レトロ台の画面らしく、うっすら走査線を重ねる */
+    .pixel .board::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 1px, transparent 1px 3px);
+    }
+
+    .pixel .ent.block::before,
+    .pixel .ent.block::after { display: none; }
+    .pixel .ent.block .spr { background-image: var(--spr-block); }
+
+    .pixel .ent.gem .spr {
+      width: 86%;
+      height: 86%;
+      background-image: var(--spr-gem);
+      background-size: 400% 100%;
+      animation: frames4 1.2s step-end infinite, bob 1.6s ease-in-out infinite alternate;
+    }
+
+    .pixel .ent.gem.collected .spr { animation: collect 0.35s ease-out forwards; }
+
+    .pixel .hero {
+      background-image: var(--spr-hero-down);
+      background-size: 200% 100%;
+    }
+
+    .pixel .player.face-up .hero { background-image: var(--spr-hero-up); }
+    .pixel .player.face-right .hero,
+    .pixel .player.face-left .hero { background-image: var(--spr-hero-right); }
+    .pixel .player.face-left .hero { transform: scaleX(-1); }
+    .pixel .player.step-b .hero { background-position: 100% 0; }
+    .pixel .ent.player.face-left svg { transform: none; }
+
+    .pixel .ent.player.hop .hero-wrap { animation: hopOnce 0.12s ease-out; }
+    .pixel .ent.player.clear .hero-wrap { animation: spinWin 0.8s ease-in-out; }
+    .hero-wrap { width: 100%; height: 100%; }
+
+    .pixel .ent.watcher .spr {
+      background-size: 200% 100%;
+      animation: blinkFrames 3.2s step-end infinite;
+    }
+
+    .pixel .ent.watcher .bubble {
+      inset: -6%;
+      border: none;
+      border-radius: 0;
+      background: var(--spr-bubble) 0 0 / 100% 100%;
+      image-rendering: pixelated;
+    }
+
+    .pixel .shot::before {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      background: var(--spr-shot) 0 0 / 100% 100%;
+      image-rendering: pixelated;
+    }
+
+    .pix-icon { display: none; width: 20px; height: 20px; }
+    .pixel .stat .pix-icon { display: block; }
+    .pixel .stat .pix-icon + svg { display: none; }
+    .pix-icon.gem { background-image: var(--spr-gem); background-size: 400% 100%; }
+
     @media (prefers-reduced-motion: reduce) {
       .stars i, .cloud-drift, .tile.water::before, .ent.gem svg { animation: none; }
+      .pixel .tile.water, .pixel .ent.gem .spr { animation: none; }
     }
   </style>
 </head>
@@ -703,6 +827,7 @@
 
     <section class="hud">
       <div class="stat" id="gemStat">
+        <i class="spr pix-icon gem"></i>
         <svg viewBox="0 0 40 40"><use href="#gemShape"/></svg>
         <span id="gemText">0/0</span>
       </div>
@@ -807,8 +932,15 @@
   <script src="arcade.js"></script>
   <script src="gem-tower-engine.js"></script>
   <script src="gem-tower-stages.js"></script>
+  <script src="gem-tower-sprites.js"></script>
   <script>
     const STAGES = window.GEM_TOWER_STAGES;
+    // ドット絵が標準。?skin=classic で前の絵柄に切り替えて比べられる
+    const PIXEL = new URLSearchParams(location.search).get('skin') !== 'classic';
+    if (PIXEL) {
+      GemSprites.install();
+      document.body.classList.add('pixel');
+    }
     const PROGRESS_KEY = 'gemTowerProgress';
     const DIR_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
 
@@ -974,6 +1106,7 @@
         if (tile === '#') cls += 'wall';
         else if (tile === '~') cls += 'water';
         else if (tile === 'E') cls += 'exit' + (state.open ? ' open' : '');
+        else if (PIXEL) cls += 'floor' + ((x * 7 + y * 13) % 5 === 0 ? ' alt' : '');
         else cls += 'floor' + ((x + y) % 2 ? ' alt' : '');
         if (seen.has(i)) cls += ' seen';
         if (t.className !== cls && !t.classList.contains('caught')) t.className = cls;
@@ -984,26 +1117,31 @@
       state.gems.forEach(i => {
         const id = `g${i}`;
         alive.add(id);
-        entity(id, 'gem', '<svg viewBox="0 0 40 40"><use href="#gemShape"/></svg>', i);
+        entity(id, 'gem', PIXEL ? '<i class="spr"></i>' : '<svg viewBox="0 0 40 40"><use href="#gemShape"/></svg>', i);
       });
 
       state.blocks.forEach(b => {
         alive.add(b.id);
-        entity(b.id, 'block', '', b.pos);
+        entity(b.id, 'block', PIXEL ? '<i class="spr"></i>' : '', b.pos);
       });
 
       state.watchers.forEach(w => {
         alive.add(w.id);
-        const el = entity(w.id, 'watcher', `<div class="rot">${WATCHER_SVG}</div><div class="bubble"><b></b></div>`, w.pos);
-        el.querySelector('.rot').style.transform = `rotate(${DIR_ROT[w.dir]}deg)`;
+        const el = entity(w.id, 'watcher', PIXEL
+          ? `<i class="spr" style="animation-delay:-${(w.pos % 7) * 0.45}s"></i><div class="bubble"><b></b></div>`
+          : `<div class="rot">${WATCHER_SVG}</div><div class="bubble"><b></b></div>`, w.pos);
+        if (PIXEL) el.querySelector('.spr').style.backgroundImage = `var(--spr-watcher-${w.dir})`;
+        else el.querySelector('.rot').style.transform = `rotate(${DIR_ROT[w.dir]}deg)`;
         el.classList.toggle('bubbled', w.bubble > 0);
         el.querySelector('.bubble b').textContent = w.bubble;
       });
 
-      const p = entity('player', 'player', PLAYER_SVG, state.player.pos);
+      const p = entity('player', 'player', PIXEL ? '<div class="hero-wrap"><i class="spr hero"></i></div>' : PLAYER_SVG, state.player.pos);
       ['up', 'down', 'left', 'right'].forEach(d => p.classList.toggle(`face-${d}`, state.player.dir === d));
-      const eyeShift = { up: '0,-1', down: '0,0.6', left: '-1.6,0', right: '1.6,0' }[state.player.dir];
-      p.querySelector('.eyes').setAttribute('transform', `translate(${state.player.dir === 'left' ? '1.6,0' : eyeShift})`);
+      if (!PIXEL) {
+        const eyeShift = { up: '0,-1', down: '0,0.6', left: '-1.6,0', right: '1.6,0' }[state.player.dir];
+        p.querySelector('.eyes').setAttribute('transform', `translate(${state.player.dir === 'left' ? '1.6,0' : eyeShift})`);
+      }
 
       // 消えたもの（宝玉の取得はアニメーションで消す）
       entityEls.forEach((el, id) => {
@@ -1050,6 +1188,7 @@
       events.forEach(e => {
         if (e.type === 'move') {
           const p = entityEls.get('player');
+          p.classList.toggle('step-b');  // 1歩ごとに足を入れかえる
           p.classList.remove('hop');
           void p.offsetWidth;
           p.classList.add('hop');

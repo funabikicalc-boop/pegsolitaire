@@ -898,28 +898,14 @@
 
     .modal {
       width: 100%;
-      max-width: 440px;
+      max-width: 380px;
       max-height: 85vh;
-      overflow-y: auto;
-      border-bottom: none;
-      border-radius: 26px 26px 0 0;
-      padding: 14px 20px max(20px, env(safe-area-inset-bottom));
-      animation: sheetUp 0.35s cubic-bezier(.2,.9,.3,1.1);
-    }
-
-    .modal::before {
-      content: '';
-      display: block;
-      width: 40px;
-      height: 4px;
-      border-radius: 999px;
-      background: rgba(255, 233, 168, 0.4);
-      margin: 0 auto 14px;
-    }
-
-    @keyframes sheetUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+      max-height: 85dvh;
+      display: flex;
+      flex-direction: column;
+      border-radius: 24px;
+      padding: 24px 20px 20px;
+      animation: confirmIn 0.3s cubic-bezier(.2,.9,.3,1.3);
     }
 
     .modal h2 {
@@ -929,6 +915,22 @@
       text-align: center;
       color: var(--gold-light);
       margin-bottom: 16px;
+    }
+
+    /* 中身だけスクロールさせ、閉じるボタンは常に見せる */
+    .modal ul,
+    .modal .ranking-content {
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .modal .primary-btn { flex-shrink: 0; }
+
+    @media (max-height: 620px) {
+      .modal { padding: 18px 16px 16px; }
+      .modal h2 { margin-bottom: 10px; }
+      .modal ul { gap: 6px; margin-bottom: 14px; }
+      .rules li { font-size: 0.84rem; line-height: 1.5; }
     }
 
     .modal ul {
@@ -1393,23 +1395,23 @@
   </div>
 
   <!-- ルール説明モーダル -->
-  <div class="modal-overlay" id="rulesModal">
+  <div class="modal-overlay center" id="rulesModal">
     <div class="modal">
       <h2>あそびかた</h2>
       <ul class="rules">
-        <li><span class="num">1</span>泡をタップして選び、空いているマスをタップして移動</li>
-        <li><span class="num">2</span>移動できるのは空きマスでつながっている場所だけ</li>
-        <li><span class="num">3</span>同じ色を縦・横・斜めに5つ以上並べると消える</li>
-        <li><span class="num">4</span>泡を消すとスコアがもらえる</li>
-        <li><span class="num">5</span>毎ターン3つの新しい泡が出現する（消したターンは出ない）</li>
-        <li><span class="num">6</span>マスが全部埋まるとゲームオーバー</li>
+        <li><span class="num">1</span>動かしたい泡をタップして、行きたいマスをタップしてね</li>
+        <li><span class="num">2</span>泡は空いているマスを通って進むよ。ほかの泡は飛びこえられないから、道がふさがっていないかチェック！</li>
+        <li><span class="num">3</span>同じ色の泡を、たて・よこ・ななめに5つ以上ならべると、パチンと消えるよ</li>
+        <li><span class="num">4</span>泡1つにつき2点ゲット！一度にたくさん消したり、続けて消したりすると「竜宮フィーバー」が起きるかも？</li>
+        <li><span class="num">5</span>泡を動かすたびに、新しい泡が3つやってくるよ。でも泡を消せたターンはお休み</li>
+        <li><span class="num">6</span>マスが泡でいっぱいになったらゲームオーバー。こまめに消していこう！</li>
       </ul>
-      <button class="primary-btn" id="closeRulesBtn">OK</button>
+      <button class="primary-btn" id="closeRulesBtn">わかった！</button>
     </div>
   </div>
 
   <!-- ランキングモーダル -->
-  <div class="modal-overlay" id="rankingModal">
+  <div class="modal-overlay center" id="rankingModal">
     <div class="modal ranking-modal">
       <h2>ランキング</h2>
       <div id="rankingContent" class="ranking-content">

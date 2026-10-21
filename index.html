@@ -281,6 +281,95 @@
       color: rgba(255, 248, 231, 0.4);
     }
 
+    .cab-catch { display: none; }
+
+    /* ===== スマホ：筐体を2列にして、1画面でゲームを見比べられるように ===== */
+    @media (max-width: 699px) {
+      body { padding-top: max(12px, env(safe-area-inset-top)); }
+
+      .sign {
+        padding: 9px;
+        border-radius: 20px;
+        margin-bottom: 14px;
+      }
+
+      .sign-inner {
+        padding: 12px 8px 10px;
+        border-radius: 12px;
+      }
+
+      .sign .logo-title { font-size: clamp(24px, 8vw, 36px); }
+      .sign .logo-sub { font-size: 0.72rem; margin-top: 4px; }
+      .neon { display: none; }
+
+      .cabinets {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .cabinet { border-radius: 18px; border-width: 2px; }
+
+      .cab-top { padding: 8px 6px 6px; border-bottom-width: 2px; }
+
+      .cab-title {
+        font-size: clamp(17px, 5.4vw, 24px);
+        line-height: 1;
+        /* 2行で表示して、どの台も同じ高さにそろえる */
+        min-height: 2.14em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cab-sub { font-size: 0.66rem; letter-spacing: 0.08em; }
+
+      .badge {
+        top: 6px;
+        right: -40px;
+        width: 120px;
+        font-size: 0.6rem;
+      }
+
+      .cab-screen {
+        margin: 8px 8px 0;
+        border-radius: 10px;
+        aspect-ratio: 4 / 3;
+      }
+
+      .cab-body { padding: 8px 8px 12px; }
+      .cab-desc, .tags { display: none; }
+
+      .cab-catch {
+        display: block;
+        font-family: var(--font-jp);
+        font-weight: 900;
+        font-size: 0.74rem;
+        line-height: 1.4;
+        text-align: center;
+        color: rgba(255, 248, 231, 0.85);
+        margin-bottom: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .cab-play {
+        height: 40px;
+        font-size: 0.9rem;
+        gap: 6px;
+      }
+
+      .cab-play svg { width: 14px; height: 14px; }
+
+      .soon-label {
+        height: 40px;
+        line-height: 36px;
+        font-size: 0.85rem;
+      }
+
+      .footer { margin-top: 20px; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .spot, .neon { animation: none; }
     }
@@ -316,7 +405,7 @@
         <span class="badge">つづきから</span>
       </div>
       <div class="cab-screen">
-        <svg viewBox="0 0 320 180" aria-hidden="true">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <defs>
             <linearGradient id="seaBg" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#36c9d6"/>
@@ -368,6 +457,7 @@
         </svg>
       </div>
       <div class="cab-body">
+        <p class="cab-catch">泡を5つ並べて消そう</p>
         <p class="cab-desc">海の底の竜宮城で、同じ色の泡を5つ並べて消そう！続けて消すと「竜宮フィーバー」が起きるかも？</p>
         <div class="tags"><span class="tag">ライン消し</span><span class="tag">ランキングあり</span></div>
         <span class="slot-btn blue cab-play">
@@ -384,7 +474,7 @@
         <span class="badge">つづきから</span>
       </div>
       <div class="cab-screen">
-        <svg viewBox="0 0 320 180" aria-hidden="true">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <defs>
             <linearGradient id="duskBg" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#2a0f48"/>
@@ -412,6 +502,7 @@
         </svg>
       </div>
       <div class="cab-body">
+        <p class="cab-catch">飛びこえて最後の1個へ</p>
         <p class="cab-desc">黄金の宝玉を飛びこえて消していき、最後の1個を目指すパズル。シンプルだけど奥が深い！</p>
         <div class="tags"><span class="tag">パズル</span><span class="tag">じっくり派</span></div>
         <span class="slot-btn red cab-play">
@@ -427,7 +518,7 @@
         <div class="cab-sub">新しい台を準備中</div>
       </div>
       <div class="cab-screen">
-        <svg viewBox="0 0 320 180" aria-hidden="true">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <defs>
             <linearGradient id="craneBg" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#3a1470"/>
@@ -452,8 +543,9 @@
         </svg>
       </div>
       <div class="cab-body">
+        <p class="cab-catch">おたのしみに！</p>
         <p class="cab-desc">次はどんな台が入荷するかな？おたのしみに！</p>
-        <span class="soon-label">COMING SOON</span>
+        <span class="soon-label">SOON</span>
       </div>
     </div>
   </main>

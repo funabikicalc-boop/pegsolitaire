@@ -67,6 +67,8 @@ const Arcade = (() => {
 
   // 画面中央付近（targetEl の中心）にカットインを出す
   function banner(targetEl, title, { sub = '', fever = false } = {}) {
+    // 前のカットインが残っていたら消して、文字が重ならないようにする
+    document.querySelectorAll('.fx-banner').forEach(el => el.remove());
     const rect = targetEl.getBoundingClientRect();
     const el = document.createElement('div');
     el.className = 'fx-banner' + (fever ? ' fever' : '');

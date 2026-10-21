@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#1a1440">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Gem Tower</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@600;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="arcade.css">
+  <style>
+    :root {
+      --stage: clamp(60px, 11vh, 110px);
+      --pad: 50px;
+      /* 盤面の一辺：横幅いっぱいを基本に、十字キーの分の高さを残して縮める */
+      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - var(--stage) - var(--pad) * 3 - 110px));
+      --panel: linear-gradient(180deg, rgba(34, 26, 80, 0.92), rgba(16, 12, 42, 0.95));
+    }
+
+    @supports (height: 100dvh) {
+      :root {
+        --stage: clamp(60px, 11dvh, 110px);
+        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - var(--stage) - var(--pad) * 3 - 110px));
+      }
+    }
+
+    html, body {
+      height: 100%;
+      background: #120c30;
+    }
+
+    body {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* ===== 雲の上の塔 ===== */
+    .scene {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 35% at 50% 0%, rgba(160, 140, 255, 0.45), transparent 70%),
+        linear-gradient(180deg, #120c30 0%, #2a1f6b 45%, #5a3f9e 75%, #c58bd6 100%);
+    }
+
+    .stars i {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 4px #fff;
+      will-change: opacity;
+      animation: twinkle 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      from { opacity: 0.2; }
+      to { opacity: 1; }
+    }
+
+    .tower-bg {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: min(130vw, 620px);
+      transform: translateX(-50%);
+      opacity: 0.5;
+    }
+
+    .clouds {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -2px;
+      height: 22vh;
+    }
+
+    .cloud-drift {
+      animation: cloud 30s linear infinite alternate;
+    }
+
+    @keyframes cloud {
+      from { transform: translateX(-4%); }
+      to { transform: translateX(4%); }
+    }
+
+    /* ===== 画面全体 ===== */
+    .app {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      height: 100%;
+      margin: 0 auto;
+      padding: max(8px, env(safe-area-inset-top)) var(--gutter) max(10px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stage {
+      position: relative;
+      flex: 0 0 auto;
+      height: var(--stage);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .stage .logo-title { font-size: clamp(22px, 6.5vw, 30px); }
+
+    .stage .logo-sub {
+      background: linear-gradient(180deg, #7a4dff, #3d1fa3);
+      font-size: 0.75rem;
+    }
+
+    .icon-btn { background: rgba(26, 18, 70, 0.75); }
+    #backBtn { left: 0; top: 50%; transform: translateY(-50%); }
+    #floorBtn { right: 50px; top: 50%; transform: translateY(-50%); }
+    #helpBtn { right: 0; top: 50%; transform: translateY(-50%); }
+    .icon-btn:active { transform: translateY(-50%) scale(0.9); }
+
+    /* ===== 状況表示 ===== */
+    .hud {
+      width: var(--frame);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .stat {
+      height: 42px;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      background: var(--panel) padding-box, var(--gold-metal) border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #fff3c4;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    .stat small {
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .stat.done { color: #5ff3ea; }
+    .stat.empty { color: var(--text-dim); }
+
+    /* ===== 盤面 ===== */
+    .board {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 2px #3a2400;
+      touch-action: none;
+    }
+
+    .board.shake { animation: shake 0.35s; }
+
+    @keyframes shake {
+      20%, 60% { transform: translateX(-5px); }
+      40%, 80% { transform: translateX(5px); }
+    }
+
+    .tiles {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: repeat(var(--cols), 1fr);
+      grid-template-rows: repeat(var(--rows), 1fr);
+    }
+
+    .tile { position: relative; }
+
+    .tile.floor { background: #3a2f6e; }
+    .tile.floor.alt { background: #342a64; }
+
+    .tile.floor::before {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      border-radius: 3px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    }
+
+    .tile.wall {
+      background: #241c4c;
+    }
+
+    .tile.wall::before {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 6px;
+      background: linear-gradient(180deg, #9a8ad0 0%, #6f5fae 40%, #4a3c86 100%);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -4px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .tile.water {
+      background: linear-gradient(180deg, #2f8ce0, #1a56b0);
+      overflow: hidden;
+    }
+
+    .tile.water::before {
+      content: '';
+      position: absolute;
+      inset: 0 -50% 0 -50%;
+      background: repeating-linear-gradient(115deg, transparent 0 8px, rgba(255, 255, 255, 0.18) 8px 10px, transparent 10px 18px);
+      will-change: transform;
+      animation: wave 2.4s linear infinite;
+    }
+
+    @keyframes wave {
+      from { transform: translateX(-12%); }
+      to { transform: translateX(12%); }
+    }
+
+    /* 封印の扉 */
+    .tile.exit { background: #3a2f6e; }
+
+    .tile.exit::before {
+      content: '';
+      position: absolute;
+      inset: 8% 12% 0;
+      border-radius: 50% 50% 0 0 / 40% 40% 0 0;
+      background: linear-gradient(180deg, #4a3c86, #241c4c);
+      box-shadow: inset 0 0 0 2px #e0a520, 0 0 0 2px #3a2400;
+    }
+
+    .tile.exit::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      width: 26%;
+      height: 26%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff 0%, #ff8ad8 40%, #9b1f7a 100%);
+      box-shadow: 0 0 6px rgba(255, 120, 210, 0.8);
+    }
+
+    .tile.exit.open::before {
+      background: radial-gradient(ellipse at 50% 70%, #fffbe0 0%, #ffd34d 45%, #e08a00 100%);
+      box-shadow: inset 0 0 0 2px #fff1a8, 0 0 14px 4px rgba(255, 210, 80, 0.8);
+    }
+
+    .tile.exit.open::after {
+      background: none;
+      box-shadow: none;
+    }
+
+    /* 見張りの視線 */
+    .tile.seen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 60, 90, 0.22);
+      box-shadow: inset 0 0 0 1px rgba(255, 90, 120, 0.25);
+    }
+
+    .tile.caught::after {
+      background: rgba(255, 40, 70, 0.65);
+      animation: blinkRed 0.25s steps(2) 4;
+    }
+
+    @keyframes blinkRed {
+      50% { opacity: 0.3; }
+    }
+
+    /* ===== 動くもの ===== */
+    .entities {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .ent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: calc(100% / var(--cols));
+      height: calc(100% / var(--rows));
+      transform: translate(calc(var(--x) * 100%), calc(var(--y) * 100%));
+      transition: transform 0.12s ease-out;
+      display: grid;
+      place-items: center;
+    }
+
+    .ent svg { width: 88%; height: 88%; overflow: visible; }
+
+    .ent .rot {
+      width: 88%;
+      height: 88%;
+      display: grid;
+      place-items: center;
+    }
+
+    .ent .rot svg { width: 100%; height: 100%; }
+
+    .ent.block::before {
+      content: '';
+      width: 84%;
+      height: 84%;
+      border-radius: 14%;
+      background: linear-gradient(180deg, #f0cf8e 0%, #c99a52 45%, #8a6230 100%);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -4px 0 rgba(0, 0, 0, 0.3), 0 3px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .ent.block::after {
+      content: '';
+      position: absolute;
+      width: 44%;
+      height: 44%;
+      border-radius: 12%;
+      box-shadow: inset 0 0 0 2px rgba(110, 70, 20, 0.55);
+      transform: rotate(45deg);
+    }
+
+    .ent.sinking {
+      opacity: 0;
+      transition: transform 0.12s ease-out, opacity 0.35s ease-in 0.1s;
+    }
+
+    .ent.gem svg { width: 70%; height: 70%; animation: bob 1.6s ease-in-out infinite alternate; }
+
+    @keyframes bob {
+      from { transform: translateY(6%); }
+      to { transform: translateY(-8%); }
+    }
+
+    .ent.gem.collected svg { animation: collect 0.35s ease-out forwards; }
+
+    @keyframes collect {
+      to { transform: translateY(-60%) scale(1.5); opacity: 0; }
+    }
+
+    .ent.watcher .bubble {
+      position: absolute;
+      inset: 2%;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.8) 0 8%, rgba(160, 230, 255, 0.35) 9% 60%, rgba(255, 140, 220, 0.3) 100%);
+      display: none;
+      place-items: end center;
+    }
+
+    .ent.watcher.bubbled .bubble {
+      display: grid;
+      animation: wobble 0.9s ease-in-out infinite alternate;
+    }
+
+    @keyframes wobble {
+      from { transform: scale(1); }
+      to { transform: scale(1.06, 0.95); }
+    }
+
+    .bubble b {
+      margin-bottom: -6px;
+      min-width: 18px;
+      padding: 0 4px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #fff;
+      background: #e0164a;
+      border: 1px solid #ffe08a;
+      text-align: center;
+    }
+
+    .ent.player { z-index: 2; }
+    .ent.player.face-left svg { transform: scaleX(-1); }
+    .player .eyes { transition: transform 0.12s; }
+    .player.face-up .eyes { display: none; }
+    .player.face-up .hair-back { display: block; }
+    .player .hair-back { display: none; }
+
+    .ent.player.hop svg { animation: hopOnce 0.12s ease-out; }
+
+    @keyframes hopOnce {
+      50% { transform: translateY(-10%); }
+    }
+
+    .ent.player.face-left.hop svg { animation: hopOnceL 0.12s ease-out; }
+
+    @keyframes hopOnceL {
+      0%, 100% { transform: scaleX(-1); }
+      50% { transform: scaleX(-1) translateY(-10%); }
+    }
+
+    .ent.player.clear svg { animation: spinWin 0.8s ease-in-out; }
+
+    @keyframes spinWin {
+      50% { transform: translateY(-30%) scale(1.2); }
+    }
+
+    .shot {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: calc(100% / var(--cols));
+      height: calc(100% / var(--rows));
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      z-index: 3;
+      transform: translate(calc(var(--x) * 100%), calc(var(--y) * 100%));
+    }
+
+    .shot::before {
+      content: '';
+      width: 46%;
+      height: 46%;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: radial-gradient(circle at 32% 28%, #fff 0 12%, rgba(160, 230, 255, 0.6) 13% 70%, rgba(255, 140, 220, 0.5));
+      box-shadow: 0 0 10px rgba(160, 230, 255, 0.9);
+    }
+
+    /* ===== 操作ボタン ===== */
+    .controls {
+      width: var(--frame);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, var(--pad));
+      grid-template-rows: repeat(3, var(--pad));
+      gap: 3px;
+    }
+
+    .pad-btn {
+      border-radius: 14px;
+      border: 2px solid #ffe08a;
+      background: linear-gradient(180deg, #8a6dff 0%, #5a3fd0 50%, #34209a 100%);
+      box-shadow: 0 4px 0 #1c0f5c, 0 6px 12px rgba(0, 0, 0, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.45);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      touch-action: none;
+    }
+
+    .pad-btn svg { width: 22px; height: 22px; }
+
+    .pad-btn.pressed,
+    .pad-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #1c0f5c, inset 0 2px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    .pad-up { grid-area: 1 / 2; }
+    .pad-left { grid-area: 2 / 1; }
+    .pad-right { grid-area: 2 / 3; }
+    .pad-down { grid-area: 3 / 2; }
+
+    /* 真ん中は泡の魔法 */
+    .pad-shot {
+      grid-area: 2 / 2;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff 0 10%, #9be8ff 11% 45%, #ff7ad0 100%);
+      box-shadow: 0 4px 0 #7a1f6b, 0 6px 12px rgba(0, 0, 0, 0.4);
+      color: #4a1050;
+      font-weight: 800;
+      font-size: 0.8rem;
+      position: relative;
+    }
+
+    .pad-shot:disabled {
+      filter: grayscale(1) brightness(0.6);
+    }
+
+    .pad-shot b {
+      position: absolute;
+      right: -4px;
+      top: -4px;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #e0164a;
+      color: #fff;
+      font-size: 0.68rem;
+      line-height: 16px;
+      border: 1px solid #ffe08a;
+    }
+
+    /* 泡を撃つ向きを選んでいるとき */
+    .aiming .pad-btn:not(.pad-shot) {
+      background: linear-gradient(180deg, #ffb3e6 0%, #ff4fb8 50%, #b0127a 100%);
+      box-shadow: 0 4px 0 #6b0a4a, 0 0 16px rgba(255, 110, 200, 0.8), inset 0 2px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    .aiming .pad-shot {
+      animation: pulse 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulse {
+      to { transform: scale(1.12); }
+    }
+
+    .side-btns {
+      flex: 1;
+      max-width: 180px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .side-btns .slot-btn {
+      height: 46px;
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+    }
+
+    .aim-hint {
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.75rem;
+      text-align: center;
+      color: #ffb3e6;
+      min-height: 1em;
+      visibility: hidden;
+    }
+
+    .aiming .aim-hint { visibility: visible; }
+
+    /* ===== フロア選択 ===== */
+    .floors {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      gap: 8px;
+    }
+
+    .floor-btn {
+      padding: 10px 6px;
+      border-radius: 14px;
+      border: 2px solid rgba(255, 215, 120, 0.6);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      text-align: center;
+    }
+
+    .floor-btn .f {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      color: var(--gold-light);
+    }
+
+    .floor-btn .n {
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .floor-btn .st { font-size: 0.8rem; letter-spacing: 1px; color: #ffd34d; }
+    .floor-btn .st .off { color: rgba(255, 255, 255, 0.2); }
+    .floor-btn.current { border-color: #5ff3ea; box-shadow: 0 0 10px rgba(95, 243, 234, 0.5); }
+    .floor-btn:disabled { opacity: 0.35; }
+
+    /* フロア開始・クリアのカード */
+    .intro-floor {
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      line-height: 1;
+      background: var(--gold-text);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 1.5px #5a2a00;
+      padding-bottom: 0.1em;
+    }
+
+    .intro-name {
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 1.2rem;
+      color: var(--gold-light);
+      margin: 4px 0 12px;
+    }
+
+    .intro-hint {
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: rgba(255, 248, 231, 0.85);
+      margin-bottom: 18px;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .stars-big {
+      font-size: 2.4rem;
+      letter-spacing: 6px;
+      color: #ffd34d;
+      text-shadow: 0 0 12px rgba(255, 200, 60, 0.8);
+      margin: 4px 0 6px;
+    }
+
+    .stars-big .off { color: rgba(255, 255, 255, 0.18); text-shadow: none; }
+
+    .result-moves {
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 18px;
+    }
+
+    .card-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .card-actions.two { grid-template-columns: 1fr 1fr; }
+    .card-actions .slot-btn { height: 48px; }
+
+    .card {
+      text-align: center;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .stars i, .cloud-drift, .tile.water::before, .ent.gem svg { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scene" aria-hidden="true">
+    <div class="stars" id="stars"></div>
+    <svg class="tower-bg" viewBox="0 0 300 400" preserveAspectRatio="xMidYMax meet">
+      <g fill="#1a1245">
+        <path d="M120 400 L126 120 L174 120 L180 400 Z"/>
+        <path d="M112 128 L150 70 L188 128 Z"/>
+        <rect x="146" y="40" width="8" height="34"/>
+        <circle cx="150" cy="36" r="8" fill="#ffd34d" opacity="0.8"/>
+        <path d="M60 400 L66 230 L104 230 L110 400 Z"/>
+        <path d="M54 236 L85 196 L116 236 Z"/>
+        <path d="M190 400 L196 250 L234 250 L240 400 Z"/>
+        <path d="M184 256 L215 214 L246 256 Z"/>
+      </g>
+      <g fill="#ffd34d" opacity="0.7">
+        <rect x="145" y="160" width="10" height="14" rx="5"/><rect x="145" y="220" width="10" height="14" rx="5"/>
+        <rect x="80" y="270" width="10" height="14" rx="5"/><rect x="210" y="290" width="10" height="14" rx="5"/>
+      </g>
+    </svg>
+    <svg class="clouds" viewBox="0 0 400 100" preserveAspectRatio="none">
+      <g class="cloud-drift" fill="#e8d6ff" opacity="0.9">
+        <ellipse cx="40" cy="80" rx="80" ry="40"/><ellipse cx="140" cy="90" rx="90" ry="36"/>
+        <ellipse cx="260" cy="82" rx="90" ry="42"/><ellipse cx="370" cy="88" rx="80" ry="38"/>
+      </g>
+      <g fill="#fff" opacity="0.85">
+        <ellipse cx="90" cy="104" rx="110" ry="30"/><ellipse cx="320" cy="106" rx="120" ry="32"/>
+      </g>
+    </svg>
+  </div>
+
+  <main class="app" id="app">
+    <header class="stage">
+      <button class="icon-btn" id="backBtn" aria-label="戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="icon-btn" id="floorBtn" aria-label="フロア選択">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4v-4h4v-4h4V8h4"/></svg>
+      </button>
+      <button class="icon-btn" id="helpBtn" aria-label="ルール">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 1c0 1.7-2.5 2.3-2.5 3.8"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>
+      </button>
+      <div class="logo">
+        <div class="logo-title">Gem Tower</div>
+        <div class="logo-sub" id="floorLabel">1F はじまりの間</div>
+      </div>
+    </header>
+
+    <section class="hud">
+      <div class="stat" id="gemStat">
+        <svg viewBox="0 0 40 40"><use href="#gemShape"/></svg>
+        <span id="gemText">0/0</span>
+      </div>
+      <div class="stat" id="shotStat">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="rgba(160,230,255,0.4)" stroke="#fff" stroke-width="2"/><circle cx="9" cy="9" r="2.4" fill="#fff"/></svg>
+        <span id="shotText">0</span>
+      </div>
+      <div class="stat">
+        <small>手数</small>
+        <span id="moveText">0</span>
+      </div>
+    </section>
+
+    <div class="frame" id="frame">
+      <div class="lights" id="lights"></div>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <div class="board" id="board">
+        <div class="tiles" id="tiles"></div>
+        <div class="entities" id="entities"></div>
+      </div>
+    </div>
+
+    <div class="controls" id="controls">
+      <div class="dpad">
+        <button class="pad-btn pad-up" data-dir="up" aria-label="上">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5l8 11H4z"/></svg>
+        </button>
+        <button class="pad-btn pad-left" data-dir="left" aria-label="左">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 12l11-8v16z"/></svg>
+        </button>
+        <button class="pad-btn pad-shot" id="shotBtn" aria-label="泡の魔法">泡<b id="shotBadge">0</b></button>
+        <button class="pad-btn pad-right" data-dir="right" aria-label="右">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 12L8 20V4z"/></svg>
+        </button>
+        <button class="pad-btn pad-down" data-dir="down" aria-label="下">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 19L4 8h16z"/></svg>
+        </button>
+      </div>
+      <div class="side-btns">
+        <div class="aim-hint">撃つ向きを選んでね</div>
+        <button class="slot-btn blue" id="undoBtn">1手もどす</button>
+        <button class="slot-btn red" id="retryBtn">やり直し</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 絵のパーツ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="gemGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#c8fffb"/>
+        <stop offset="0.45" stop-color="#29d3c8"/>
+        <stop offset="1" stop-color="#7a3bd0"/>
+      </linearGradient>
+      <symbol id="gemShape" viewBox="0 0 40 40">
+        <path d="M10 6 L30 6 L38 16 L20 37 L2 16 Z" fill="url(#gemGrad)" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M2 16 L38 16 M10 6 L14 16 L20 37 L26 16 L30 6 M14 16 L20 6 L26 16" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.2"/>
+        <path d="M11 9 L16 9 L13 14 Z" fill="#fff" opacity="0.8"/>
+      </symbol>
+      <linearGradient id="stoneGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#d8d4ec"/>
+        <stop offset="1" stop-color="#7d779e"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- フロア開始・クリア・見つかったときのカード -->
+  <div class="modal-overlay" id="cardModal">
+    <div class="modal card" id="card"></div>
+  </div>
+
+  <!-- フロア選択 -->
+  <div class="modal-overlay" id="floorModal">
+    <div class="modal">
+      <h2>フロアをえらぶ</h2>
+      <div class="modal-body"><div class="floors" id="floorList"></div></div>
+      <button class="primary-btn" id="closeFloorBtn">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ルール -->
+  <div class="modal-overlay" id="rulesModal">
+    <div class="modal">
+      <h2>あそびかた</h2>
+      <div class="modal-body">
+        <ul class="rules">
+          <li><span class="num">1</span>十字キーかスワイプで動くよ。フロアの宝玉を全部集めると、扉の封印がとけるよ</li>
+          <li><span class="num">2</span>開いた扉に入ればフロアクリア！少ない手数でクリアすると星がふえるよ</li>
+          <li><span class="num">3</span>石のブロックは押して動かせる。水に落とすと足場になるよ</li>
+          <li><span class="num">4</span>石像の視線（赤いマス）に入ると見つかってしまう。ブロックで視線をさえぎろう</li>
+          <li><span class="num">5</span>真ん中の「泡」を押してから向きを選ぶと、泡の魔法を撃てるよ。石像を閉じ込めると押して動かせる（5ターンで割れる）</li>
+          <li><span class="num">6</span>失敗しても「1手もどす」で何回でもやり直せるよ</li>
+        </ul>
+      </div>
+      <button class="primary-btn" id="closeRulesBtn">わかった！</button>
+    </div>
+  </div>
+
+  <script src="arcade.js"></script>
+  <script src="gem-tower-engine.js"></script>
+  <script src="gem-tower-stages.js"></script>
+  <script>
+    const STAGES = window.GEM_TOWER_STAGES;
+    const PROGRESS_KEY = 'gemTowerProgress';
+    const DIR_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+
+    let floor = 0;
+    let state = null;
+    let history = [];
+    let aiming = false;
+    // クリアや見つかったときのカードは少し遅れて出すので、フロアを変えたら取り消す
+    let cardTimer = null;
+
+    function later(fn, ms) {
+      clearTimeout(cardTimer);
+      cardTimer = setTimeout(fn, ms);
+    }
+
+    // ===== 進み具合のセーブ =====
+    function loadProgress() {
+      try {
+        return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || { stars: {}, floor: 0 };
+      } catch (e) {
+        return { stars: {}, floor: 0 };
+      }
+    }
+
+    function saveProgress(p) {
+      try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) {}
+    }
+
+    let progress = loadProgress();
+
+    function unlockedUpTo() {
+      let n = 0;
+      while (n < STAGES.length - 1 && progress.stars[n]) n++;
+      return n;
+    }
+
+    function starsFor(moves, par) {
+      if (moves <= par) return 3;
+      if (moves <= Math.ceil(par * 1.5)) return 2;
+      return 1;
+    }
+
+    function starText(n) {
+      return '★'.repeat(n) + `<span class="off">${'★'.repeat(3 - n)}</span>`;
+    }
+
+    // ===== 効果音 =====
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    document.addEventListener('pointerdown', () => audioCtx.resume(), { once: true });
+
+    function tone(freq, { type = 'sine', dur = 0.12, vol = 0.12, to = null, delay = 0 } = {}) {
+      const t = audioCtx.currentTime + delay;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t);
+      osc.stop(t + dur);
+    }
+
+    const sounds = {
+      move: () => tone(420, { dur: 0.06, vol: 0.05 }),
+      bump: () => tone(120, { type: 'square', dur: 0.06, vol: 0.03 }),
+      push: () => tone(160, { type: 'triangle', dur: 0.14, vol: 0.15, to: 90 }),
+      sink: () => { tone(500, { dur: 0.3, vol: 0.12, to: 120 }); tone(900, { dur: 0.2, vol: 0.05, to: 300, delay: 0.05 }); },
+      gem: () => { tone(1047, { type: 'triangle', dur: 0.15, vol: 0.12 }); tone(1568, { type: 'triangle', dur: 0.2, vol: 0.1, delay: 0.07 }); },
+      open: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.3, vol: 0.1, delay: i * 0.08 })),
+      shot: () => tone(600, { dur: 0.25, vol: 0.1, to: 1400 }),
+      pop: () => tone(900, { dur: 0.08, vol: 0.12, to: 300 }),
+      caught: () => { tone(300, { type: 'sawtooth', dur: 0.5, vol: 0.08, to: 80 }); },
+      clear: () => [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, { type: 'triangle', dur: 0.4, vol: 0.12, delay: i * 0.08 }))
+    };
+
+    // ===== 描画 =====
+    const tilesEl = document.getElementById('tiles');
+    const entitiesEl = document.getElementById('entities');
+    const boardEl = document.getElementById('board');
+    const entityEls = new Map();
+
+    const PLAYER_SVG = `
+      <svg viewBox="0 0 40 40">
+        <ellipse cx="20" cy="37" rx="10" ry="2.5" fill="rgba(0,0,0,0.35)"/>
+        <path d="M12 34 Q12 22 20 22 Q28 22 28 34 Z" fill="#e8384f" stroke="#7a0f22" stroke-width="1.2"/>
+        <path d="M14 24 Q20 28 26 24 L27 27 Q20 31 13 27 Z" fill="#ffd34d"/>
+        <circle cx="20" cy="16" r="8" fill="#ffd7b0" stroke="#a8673a" stroke-width="1"/>
+        <path class="hair-back" d="M12 16 Q12 9 20 9 Q28 9 28 16 Q28 21 20 22 Q12 21 12 16 Z" fill="#6b3a1f"/>
+        <g class="eyes"><circle cx="17" cy="17" r="1.6" fill="#2a1a10"/><circle cx="23" cy="17" r="1.6" fill="#2a1a10"/><path d="M17.5 20.5 Q20 22 22.5 20.5" stroke="#a8673a" stroke-width="1" fill="none"/></g>
+        <ellipse cx="20" cy="10" rx="13" ry="3.2" fill="#c98a3e" stroke="#6b4210" stroke-width="1"/>
+        <path d="M13 10 Q13 2 20 2 Q27 2 27 10 Z" fill="#e0a95a" stroke="#6b4210" stroke-width="1"/>
+        <path d="M13.5 8 L26.5 8 L26.8 10 L13.2 10 Z" fill="#6b3a1f"/>
+      </svg>`;
+
+    // 見張りの石像（上向きで描いて回転させる）
+    const WATCHER_SVG = `
+      <svg viewBox="0 0 40 40">
+        <ellipse cx="20" cy="36" rx="13" ry="3" fill="rgba(0,0,0,0.35)"/>
+        <rect x="7" y="9" width="26" height="27" rx="9" fill="url(#stoneGrad)" stroke="#4a4468" stroke-width="1.5"/>
+        <path d="M11 17 L29 17" stroke="#6a6488" stroke-width="1.5"/>
+        <ellipse cx="20" cy="12" rx="8" ry="5.5" fill="#fff" stroke="#4a4468" stroke-width="1.2"/>
+        <circle cx="20" cy="10.5" r="3.4" fill="#e0163a"/>
+        <circle cx="21" cy="9.5" r="1.1" fill="#fff"/>
+        <path d="M14 26 L26 26" stroke="#6a6488" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>`;
+
+    const DIR_ROT = { up: 0, right: 90, down: 180, left: 270 };
+
+    function xy(i) {
+      return { x: i % state.W, y: Math.floor(i / state.W) };
+    }
+
+    function place(el, i) {
+      const { x, y } = xy(i);
+      el.style.setProperty('--x', x);
+      el.style.setProperty('--y', y);
+    }
+
+    function buildBoard() {
+      boardEl.style.setProperty('--cols', state.W);
+      boardEl.style.setProperty('--rows', state.H);
+      document.getElementById('frame').style.setProperty('--cols', state.W);
+      tilesEl.innerHTML = '';
+      entitiesEl.innerHTML = '';
+      entityEls.clear();
+      for (let i = 0; i < state.W * state.H; i++) {
+        const t = document.createElement('div');
+        t.className = 'tile';
+        tilesEl.appendChild(t);
+      }
+    }
+
+    function entity(id, cls, html, i) {
+      let el = entityEls.get(id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = `ent ${cls}`;
+        el.innerHTML = html;
+        entitiesEl.appendChild(el);
+        entityEls.set(id, el);
+        // 最初の位置はアニメーションさせない
+        el.style.transition = 'none';
+        place(el, i);
+        el.getBoundingClientRect();
+        el.style.transition = '';
+      } else {
+        place(el, i);
+      }
+      return el;
+    }
+
+    function render() {
+      const seen = new Set();
+      state.watchers.forEach(w => GemTower.sight(state, w).forEach(i => seen.add(i)));
+
+      [...tilesEl.children].forEach((t, i) => {
+        const tile = state.tiles[i];
+        const { x, y } = xy(i);
+        let cls = 'tile ';
+        if (tile === '#') cls += 'wall';
+        else if (tile === '~') cls += 'water';
+        else if (tile === 'E') cls += 'exit' + (state.open ? ' open' : '');
+        else cls += 'floor' + ((x + y) % 2 ? ' alt' : '');
+        if (seen.has(i)) cls += ' seen';
+        if (t.className !== cls && !t.classList.contains('caught')) t.className = cls;
+      });
+
+      const alive = new Set(['player']);
+
+      state.gems.forEach(i => {
+        const id = `g${i}`;
+        alive.add(id);
+        entity(id, 'gem', '<svg viewBox="0 0 40 40"><use href="#gemShape"/></svg>', i);
+      });
+
+      state.blocks.forEach(b => {
+        alive.add(b.id);
+        entity(b.id, 'block', '', b.pos);
+      });
+
+      state.watchers.forEach(w => {
+        alive.add(w.id);
+        const el = entity(w.id, 'watcher', `<div class="rot">${WATCHER_SVG}</div><div class="bubble"><b></b></div>`, w.pos);
+        el.querySelector('.rot').style.transform = `rotate(${DIR_ROT[w.dir]}deg)`;
+        el.classList.toggle('bubbled', w.bubble > 0);
+        el.querySelector('.bubble b').textContent = w.bubble;
+      });
+
+      const p = entity('player', 'player', PLAYER_SVG, state.player.pos);
+      ['up', 'down', 'left', 'right'].forEach(d => p.classList.toggle(`face-${d}`, state.player.dir === d));
+      const eyeShift = { up: '0,-1', down: '0,0.6', left: '-1.6,0', right: '1.6,0' }[state.player.dir];
+      p.querySelector('.eyes').setAttribute('transform', `translate(${state.player.dir === 'left' ? '1.6,0' : eyeShift})`);
+
+      // 消えたもの（宝玉の取得はアニメーションで消す）
+      entityEls.forEach((el, id) => {
+        if (alive.has(id) || el.dataset.leaving) return;
+        el.dataset.leaving = '1';
+        if (id.startsWith('g')) el.classList.add('collected');
+        setTimeout(() => { el.remove(); entityEls.delete(id); }, 400);
+      });
+
+      // 状況表示
+      const total = state.totalGems;
+      const got = total - state.gems.length;
+      document.getElementById('gemText').textContent = `${got}/${total}`;
+      document.getElementById('gemStat').classList.toggle('done', got === total);
+      document.getElementById('shotText').textContent = state.shots;
+      document.getElementById('shotStat').classList.toggle('empty', state.shots === 0);
+      document.getElementById('shotBadge').textContent = state.shots;
+      document.getElementById('shotBtn').disabled = state.shots === 0;
+      document.getElementById('moveText').textContent = state.moves;
+      document.getElementById('undoBtn').disabled = history.length === 0;
+    }
+
+    // ===== 1手の処理 =====
+    function act(action) {
+      if (!state || state.status !== 'play' || isModalOpen()) return;
+      const result = GemTower.step(state, action);
+      if (!result.acted) {
+        // 進めないときは向きだけ変える
+        state = result.state;
+        render();
+        if (action.type === 'move') sounds.bump();
+        return;
+      }
+      history.push(state);
+      state = result.state;
+      handleEvents(result.events, action);
+      render();
+      if (state.status === 'caught') onCaught(result.events.find(e => e.type === 'caught'));
+      if (state.status === 'clear') onClear();
+    }
+
+    function handleEvents(events, action) {
+      let pushed = false;
+      events.forEach(e => {
+        if (e.type === 'move') {
+          const p = entityEls.get('player');
+          p.classList.remove('hop');
+          void p.offsetWidth;
+          p.classList.add('hop');
+        } else if (e.type === 'push') {
+          pushed = true;
+        } else if (e.type === 'sink') {
+          pushed = true;
+          const el = entityEls.get(e.id);
+          if (el) {
+            place(el, e.to);
+            el.classList.add('sinking');
+          }
+          setTimeout(sounds.sink, 100);
+        } else if (e.type === 'gem') {
+          sounds.gem();
+          if (navigator.vibrate) navigator.vibrate(15);
+        } else if (e.type === 'open') {
+          setTimeout(sounds.open, 150);
+          Arcade.banner(boardEl, 'OPEN!');
+        } else if (e.type === 'shot') {
+          fireShot(e);
+        } else if (e.type === 'pop') {
+          sounds.pop();
+        }
+      });
+      if (pushed) sounds.push();
+      else if (action.type === 'move') sounds.move();
+    }
+
+    function fireShot(e) {
+      sounds.shot();
+      const from = state.player.pos;
+      const cells = e.path.length;
+      const target = e.hitId ? state.watchers.find(w => w.id === e.hitId).pos : (e.path[cells - 1] ?? from);
+      const shot = document.createElement('div');
+      shot.className = 'shot';
+      shot.style.transition = 'none';
+      place(shot, from);
+      entitiesEl.appendChild(shot);
+      shot.getBoundingClientRect();
+      shot.style.transition = `transform ${Math.max(0.1, (cells + 1) * 0.05)}s linear`;
+      place(shot, target);
+      setTimeout(() => shot.remove(), (cells + 1) * 50 + 120);
+    }
+
+    function onCaught(e) {
+      sounds.caught();
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+      e.cells.forEach(i => tilesEl.children[i].classList.add('caught'));
+      boardEl.classList.remove('shake');
+      void boardEl.offsetWidth;
+      boardEl.classList.add('shake');
+      later(() => {
+        showCard(`
+          <div class="intro-floor" style="font-size:2rem">みつかった！</div>
+          <p class="result-moves" style="margin-top:10px">石像の視線に入ってしまった…</p>
+          <div class="card-actions two">
+            <button class="slot-btn blue" data-act="undo">1手もどす</button>
+            <button class="slot-btn red" data-act="retry">やり直し</button>
+          </div>`);
+      }, 700);
+    }
+
+    function onClear() {
+      const st = STAGES[floor];
+      const stars = starsFor(state.moves, st.par);
+      const best = Math.max(progress.stars[floor] || 0, stars);
+      progress.stars[floor] = best;
+      progress.floor = Math.min(floor + 1, STAGES.length - 1);
+      saveProgress(progress);
+
+      sounds.clear();
+      entityEls.get('player').classList.add('clear');
+      const frame = document.getElementById('frame');
+      frame.classList.add('fever');
+      setTimeout(() => frame.classList.remove('fever'), 2000);
+      Arcade.banner(boardEl, 'FLOOR CLEAR!', { fever: stars === 3 });
+      if (stars === 3) Arcade.shower(30);
+
+      const last = floor === STAGES.length - 1;
+      later(() => {
+        showCard(`
+          <div class="intro-floor">${floor + 1}F CLEAR</div>
+          <div class="stars-big">${starText(stars)}</div>
+          <p class="result-moves">${state.moves}手（星3つは${st.par}手以内）</p>
+          ${last ? '<p class="intro-hint" style="text-align:center">試作版はここまで！<br>上のフロアは準備中です</p>' : ''}
+          <div class="card-actions${last ? '' : ' two'}">
+            <button class="slot-btn blue" data-act="retry">もう一度</button>
+            ${last ? '' : '<button class="slot-btn green" data-act="next">次のフロアへ</button>'}
+          </div>`);
+      }, 1500);
+    }
+
+    // ===== フロアの開始 =====
+    function startFloor(n, { intro = true } = {}) {
+      clearTimeout(cardTimer);
+      floor = n;
+      const st = STAGES[n];
+      state = GemTower.parse(st);
+      state.totalGems = state.gems.length;
+      history = [];
+      setAiming(false);
+      document.getElementById('floorLabel').textContent = `${n + 1}F ${st.name}`;
+      buildBoard();
+      render();
+      if (intro) {
+        showCard(`
+          <div class="intro-floor">${n + 1}F</div>
+          <div class="intro-name">${st.name}</div>
+          <p class="intro-hint">${st.hint}</p>
+          <button class="primary-btn" data-act="close">スタート！</button>`);
+      }
+    }
+
+    function retry() {
+      startFloor(floor, { intro: false });
+    }
+
+    function undo() {
+      if (!history.length) return;
+      clearTimeout(cardTimer);
+      state = history.pop();
+      setAiming(false);
+      [...tilesEl.children].forEach(t => t.classList.remove('caught'));
+      // 沈めたブロックが戻るときなどのため、動くものを作り直す
+      entitiesEl.innerHTML = '';
+      entityEls.clear();
+      render();
+    }
+
+    // ===== カード・モーダル =====
+    const cardModal = document.getElementById('cardModal');
+
+    function showCard(html) {
+      document.getElementById('card').innerHTML = html;
+      cardModal.classList.add('show');
+    }
+
+    function closeCard() {
+      cardModal.classList.remove('show');
+    }
+
+    function isModalOpen() {
+      return !!document.querySelector('.modal-overlay.show');
+    }
+
+    document.getElementById('card').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      closeCard();
+      const a = btn.dataset.act;
+      if (a === 'undo') undo();
+      else if (a === 'retry') retry();
+      else if (a === 'next') startFloor(floor + 1);
+    });
+
+    function openFloorSelect() {
+      const max = unlockedUpTo();
+      document.getElementById('floorList').innerHTML = STAGES.map((st, i) => `
+        <button class="floor-btn${i === floor ? ' current' : ''}" data-floor="${i}" ${i > max ? 'disabled' : ''}>
+          <div class="f">${i + 1}F</div>
+          <div class="n">${i > max ? '？？？' : st.name}</div>
+          <div class="st">${starText(progress.stars[i] || 0)}</div>
+        </button>`).join('');
+      document.getElementById('floorModal').classList.add('show');
+    }
+
+    document.getElementById('floorList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-floor]');
+      if (!btn || btn.disabled) return;
+      document.getElementById('floorModal').classList.remove('show');
+      startFloor(Number(btn.dataset.floor));
+    });
+
+    [['floorBtn', 'floorModal', 'closeFloorBtn'], ['helpBtn', 'rulesModal', 'closeRulesBtn']].forEach(([open, modal, close]) => {
+      const m = document.getElementById(modal);
+      if (open === 'floorBtn') document.getElementById(open).addEventListener('click', openFloorSelect);
+      else document.getElementById(open).addEventListener('click', () => m.classList.add('show'));
+      document.getElementById(close).addEventListener('click', () => m.classList.remove('show'));
+      m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('show'); });
+    });
+
+    // ===== 操作 =====
+    function setAiming(on) {
+      aiming = on && state && state.shots > 0;
+      document.getElementById('controls').classList.toggle('aiming', aiming);
+    }
+
+    function input(dir) {
+      if (aiming) {
+        setAiming(false);
+        act({ type: 'shoot', dir });
+      } else {
+        act({ type: 'move', dir });
+      }
+    }
+
+    document.querySelectorAll('.pad-btn[data-dir]').forEach(btn => {
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        input(btn.dataset.dir);
+      });
+    });
+
+    document.getElementById('shotBtn').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      setAiming(!aiming);
+    });
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      if (!history.length) return;
+      Arcade.showConfirm({
+        title: 'やり直しますか？',
+        text: 'このフロアを最初からやり直します。',
+        okLabel: 'やり直し',
+        okColor: 'red',
+        onOk: retry
+      });
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    // 盤面のスワイプ
+    let touchStart = null;
+    boardEl.addEventListener('pointerdown', (e) => { touchStart = { x: e.clientX, y: e.clientY }; });
+    boardEl.addEventListener('pointerup', (e) => {
+      if (!touchStart) return;
+      const dx = e.clientX - touchStart.x;
+      const dy = e.clientY - touchStart.y;
+      touchStart = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      input(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+    });
+
+    // キーボード（PC）
+    document.addEventListener('keydown', (e) => {
+      if (DIR_KEYS[e.key]) {
+        e.preventDefault();
+        input(DIR_KEYS[e.key]);
+      } else if (e.key === ' ' || e.key === 'x') {
+        e.preventDefault();
+        setAiming(!aiming);
+      } else if (e.key === 'z' || e.key === 'Backspace') {
+        undo();
+      } else if (e.key === 'Enter' && cardModal.classList.contains('show')) {
+        const btn = document.querySelector('#card [data-act="next"], #card [data-act="close"]');
+        if (btn) btn.click();
+      }
+    });
+
+    // ===== 背景の星 =====
+    const starsEl = document.getElementById('stars');
+    for (let i = 0; i < 50; i++) {
+      const s = document.createElement('i');
+      s.style.left = (Math.random() * 100) + '%';
+      s.style.top = (Math.random() * 60) + '%';
+      s.style.animationDelay = (-Math.random() * 3) + 's';
+      starsEl.appendChild(s);
+    }
+
+    Arcade.buildLights(document.getElementById('lights'), 10);
+    startFloor(Math.min(progress.floor || 0, unlockedUpTo()));
+  </script>
+</body>
+</html>

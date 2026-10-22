@@ -470,13 +470,8 @@
     const xing = { active: false, hold: 0, onT: 0, bellT: 0, alt: 0, gate: 1, manualUntil: -1, arrow: 0 };
 
     // ===== 駅 =====
-    // 停車位置：stop は電車のまん中、headStop は先頭（踏切の手前の小さな駅は先頭で合わせる）
+    // 停車位置：stop は電車のまん中、headStop は先頭で合わせる
     const STATIONS = [
-      {
-        a: 1300, b: 2250, headStop: 2290, name: 'ゆうやけえき', small: true,
-        signs: [[560, '← トンネル', 'ふみきり →']],
-        people: [{ x: 300, h: 60, c: '#f0a030' }, { x: 340, h: 40, c: '#e85d75' }, { x: 760, h: 64, c: '#3f8ae0' }]
-      },
       {
         a: 3700, b: 5000, stop: 4350, name: 'みんなのえき',
         signs: [[420, '← ふみきり', ''], [880, '', 'はし →']],
@@ -487,7 +482,7 @@
       }
     ];
     STATIONS.forEach(sn => { sn.peopleAlpha = 1; sn.peopleTarget = 1; sn.boardT = 0; });
-    const MAIN_STATION = STATIONS[1];
+    const MAIN_STATION = STATIONS[0];
     const st = { state: 'run', t: 0, still: 0, cur: -1, skip: -1, flags: {} };
     let braking = false;
 
@@ -2200,7 +2195,6 @@
 
     function drawStationBack(G) {
       STATIONS.forEach(sn => {
-        if (sn.small) return;
         const x0 = rangeX(sn.a, sn.b);
         if (x0 === null) return;
         const len = sn.b - sn.a;
@@ -2273,7 +2267,7 @@
           ctx.lineWidth = 2;
           rrPath(x - 74, -120, 148, 58, 6);
           ctx.stroke();
-          ctx.fillStyle = sn.small ? '#e0662a' : '#2f9a4e';
+          ctx.fillStyle = '#2f9a4e';
           ctx.fillRect(x - 72, -78, 144, 12);
           ctx.fillStyle = '#222';
           ctx.font = '900 24px "Zen Maru Gothic", sans-serif';
@@ -2464,6 +2458,15 @@
               }
             }
           }
+          // 遮断機が下りきるまでは踏切に入らない（間に合わなければ手前で待つ）
+          const ahead = crossAhead();
+          if (ahead > 0 && ahead < 3000 && xing.gate > 0.03) {
+            const wait = (xing.active ? Math.max(0, 1.0 - xing.onT) : 1.0) + xing.gate / 0.75 + 0.1;
+            if (ahead - 60 < Math.abs(train.v) * wait) {
+              const vlim = Math.sqrt(2 * 300 * Math.max(0, ahead - 60));
+              if (Math.abs(target) > vlim) target = autoDir * vlim;
+            }
+          }
           const speedingUp = Math.abs(target) > Math.abs(train.v) && Math.sign(target) === Math.sign(train.v || autoDir);
           const rate = speedingUp ? 260 : 420;
           train.v += clamp(target - train.v, -rate * dt, rate * dt);
@@ -2606,18 +2609,24 @@
       });
     }
 
+    // 進む向きで、踏切までの残り（先頭から。後ろ向きなら最後尾から）。通りすぎていればマイナス
+    function crossAhead() {
+      return autoDir > 0 ? wrap(POS.cross - train.p) : wrap((train.p - curT().len) - POS.cross);
+    }
+
     function crossingWanted() {
       const T = curT();
       const dh = wrap(POS.cross - train.p);      // ＋なら踏切は先頭より前
       const dt_ = dh + T.len;                    // ＋なら踏切は最後尾より前
       if (dh <= 70 && dt_ >= -70) return true;   // 踏切の上にいる
       const v = train.v;
-      if (v > 20 && dh > 0 && dh < 260 + v * 2.2) return true;
-      if (v < -20 && dt_ < 0 && -dt_ < 260 - v * 2.2) return true;
+      if (v > 20 && dh > 0 && dh < 450 + v * 2.8) return true;
+      if (v < -20 && dt_ < 0 && -dt_ < 450 - v * 2.8) return true;
       if (Math.abs(v) <= 20 && ((dh > 0 && dh < 170) || (dt_ < 0 && dt_ > -170))) return true;
-      // 踏切のすぐ手前の駅：発車前（ドアが閉まるころ）から鳴らして、遮断機を下ろしておく
-      if (st.state === 'dwell' && st.t > 4.5) {
-        if ((autoDir > 0 && dh > 0 && dh < 700) || (autoDir < 0 && dt_ < 0 && dt_ > -700)) return true;
+      // じどうで踏切の手前に止まっているとき：これから渡るので鳴らす
+      if (auto && st.state === 'run' && !braking) {
+        const ahead = crossAhead();
+        if (ahead > 0 && ahead < 1200) return true;
       }
       return false;
     }

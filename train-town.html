@@ -31,6 +31,23 @@
       font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', sans-serif;
     }
 
+    /* ゲーム全体。縦向きのタブレット・スマホでは 90 度回して、いつも横長で遊ぶ */
+    #game {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      container-type: size;
+      transform-origin: 0 0;
+    }
+
+    body.rot #trainBar,
+    body.rot .tbtn {
+      touch-action: pan-x pan-y;
+    }
+
     #world {
       position: fixed;
       inset: 0;
@@ -160,7 +177,7 @@
       display: flex;
       gap: 8px;
       padding: 10px 8px 8px;
-      max-width: calc(100vw - 260px);
+      max-width: calc(100cqw - 260px);
       overflow-x: auto;
       overscroll-behavior: contain;
       scrollbar-width: none;
@@ -174,8 +191,8 @@
 
     .tbtn {
       position: relative;
-      width: clamp(58px, 10vw, 88px);
-      height: clamp(46px, 7.4vw, 62px);
+      width: clamp(58px, 10cqw, 88px);
+      height: clamp(46px, 7.4cqw, 62px);
       border-radius: 16px;
       border: 3px solid #fff;
       background: #e7f5ff;
@@ -199,11 +216,11 @@
       transform: translateY(-5px) scale(1.07);
     }
 
-    @media (max-width: 620px) {
+    @container (max-width: 620px) {
       #trainBar {
         left: max(10px, env(safe-area-inset-left));
         transform: none;
-        max-width: calc(100vw - 110px);
+        max-width: calc(100cqw - 110px);
         gap: 5px;
         padding: 6px;
       }
@@ -234,7 +251,7 @@
 
     #start h1 {
       font-weight: 900;
-      font-size: clamp(30px, 7vw, 56px);
+      font-size: clamp(30px, 7cqw, 56px);
       color: #fff;
       letter-spacing: 0.06em;
       text-shadow: 0 4px 0 #1d5fa8, 0 0 20px rgba(0, 0, 0, 0.3);
@@ -268,6 +285,7 @@
   </style>
 </head>
 <body>
+  <div id="game">
   <canvas id="world"></canvas>
 
   <button class="btn" id="homeBtn" aria-label="ゲームセンターにもどる（ながおし）">
@@ -297,6 +315,7 @@
       <svg viewBox="0 0 24 24"><path d="M6 3.5v17l14-8.5z" fill="#fff"/></svg>
     </button>
     <p>おとが でるよ</p>
+  </div>
   </div>
 
   <script>
@@ -512,9 +531,26 @@
     const frontCtx = frontCanvas.getContext('2d');
     let W = 0, H = 0, DPR = 1, s = 1, trackY = 0, hy = 0, zT = 2.3;
 
+    // 縦向きのタッチ端末では、ゲームを 90 度回して横長の画面にする
+    const gameEl = document.getElementById('game');
+    let rotated = false;
+    const coarse = window.matchMedia('(pointer: coarse)');
+
     function layout() {
-      W = window.innerWidth;
-      H = window.innerHeight;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      rotated = vh > vw && coarse.matches;
+      document.body.classList.toggle('rot', rotated);
+      if (rotated) {
+        gameEl.style.width = vh + 'px';
+        gameEl.style.height = vw + 'px';
+        gameEl.style.transform = `translateX(${vw}px) rotate(90deg)`;
+      } else {
+        gameEl.style.width = '';
+        gameEl.style.height = '';
+        gameEl.style.transform = '';
+      }
+      W = rotated ? vh : vw;
+      H = rotated ? vw : vh;
       DPR = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.round(W * DPR);
       canvas.height = Math.round(H * DPR);
@@ -526,6 +562,7 @@
       zT = (H - hy) / (trackY - hy);
     }
     window.addEventListener('resize', layout);
+    window.addEventListener('orientationchange', () => setTimeout(layout, 200));
     layout();
 
     const yOfZ = (z) => hy + (H - hy) / z;
@@ -2845,31 +2882,39 @@
       else Snd.pop();
     }
 
+    // 画面の座標 → ゲームの座標（回しているときは向きを戻す）
+    const gp = (e) => rotated ? { x: e.clientY, y: window.innerWidth - e.clientX } : { x: e.clientX, y: e.clientY };
+
     canvas.addEventListener('pointerdown', (e) => {
       Snd.init();
+      const q = gp(e);
       if (drag.id !== null) {
-        tapAt(e.clientX, e.clientY);
+        tapAt(q.x, q.y);
         return;
       }
       drag.id = e.pointerId;
       drag.active = false;
-      drag.x0 = drag.lastX = e.clientX;
-      drag.y0 = e.clientY;
+      drag.x0 = drag.lastX = q.x;
+      drag.y0 = q.y;
       drag.pending = 0;
       try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     });
 
     canvas.addEventListener('pointermove', (e) => {
       if (e.pointerId !== drag.id) return;
-      const dx = e.clientX - drag.lastX;
-      drag.lastX = e.clientX;
-      if (!drag.active && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 12) drag.active = true;
+      const q = gp(e);
+      const dx = q.x - drag.lastX;
+      drag.lastX = q.x;
+      if (!drag.active && Math.hypot(q.x - drag.x0, q.y - drag.y0) > 12) drag.active = true;
       if (drag.active) drag.pending += dx / s;
     });
 
     function endPointer(e, cancelled) {
       if (e.pointerId !== drag.id) return;
-      if (!drag.active && !cancelled) tapAt(e.clientX, e.clientY);
+      if (!drag.active && !cancelled) {
+        const q = gp(e);
+        tapAt(q.x, q.y);
+      }
       if (drag.active && Math.abs(train.v) > 40) autoDir = Math.sign(train.v);
       drag.id = null;
       drag.active = false;

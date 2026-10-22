@@ -1250,7 +1250,7 @@
         }
       ];
       // 曲の速さ：1 で楽譜どおり、大きいほどゆっくり（防災無線のチャイムのように）
-      const SONG_SLOW = 1.4;
+      const SONG_SLOW = 2.0;
       let songBus = null;
       function song(i) {
         if (!ac) return 0;
@@ -1268,12 +1268,12 @@
         S.notes.split(' ').forEach(tok => {
           const [n, b] = tok.split(':');
           const f = NOTE[n] * (S.oct === 2 ? 2 : 1);
-          tone({ f, at, dur: 1.9, vol: 0.15, dest: songBus });
-          tone({ f: f * 2, at, dur: 0.9, vol: 0.045, dest: songBus });
-          tone({ f: f * 3.01, at, dur: 0.45, vol: 0.02, dest: songBus });
+          tone({ f, at, dur: 2.6, vol: 0.15, dest: songBus });
+          tone({ f: f * 2, at, dur: 1.2, vol: 0.045, dest: songBus });
+          tone({ f: f * 3.01, at, dur: 0.6, vol: 0.02, dest: songBus });
           at += parseFloat(b) * S.unit * SONG_SLOW;
         });
-        return at + 1.9;
+        return at + 2.6;
       }
       const songName = (i) => SONGS[i % SONGS.length].name;
 

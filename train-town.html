@@ -110,7 +110,7 @@
       z-index: 2;
     }
 
-    #camBtn, #autoBtn {
+    #camBtn, #autoBtn, #stopBtn {
       top: max(12px, env(safe-area-inset-top));
       width: 66px;
       height: 66px;
@@ -118,6 +118,10 @@
 
     #camBtn { right: max(12px, env(safe-area-inset-right)); }
     #autoBtn { right: calc(max(12px, env(safe-area-inset-right)) + 78px); }
+    #stopBtn {
+      right: calc(max(12px, env(safe-area-inset-right)) + 156px);
+      background: radial-gradient(circle at 40% 32%, #ff8a8a, #e8202a 62%, #b00010);
+    }
 
     #autoBtn.on { background: #c9f7d4; border-color: #2fbf5a; }
 
@@ -155,11 +159,18 @@
       transform: translateX(-50%);
       display: flex;
       gap: 8px;
-      padding: 8px;
+      padding: 10px 8px 8px;
+      max-width: calc(100vw - 260px);
+      overflow-x: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      touch-action: pan-x;
       border-radius: 24px;
       background: rgba(255, 255, 255, 0.5);
       z-index: 2;
     }
+
+    #trainBar::-webkit-scrollbar { display: none; }
 
     .tbtn {
       position: relative;
@@ -169,9 +180,10 @@
       border: 3px solid #fff;
       background: #e7f5ff;
       box-shadow: 0 3px 0 rgba(0, 0, 0, 0.15);
+      flex: none;
       overflow: hidden;
       cursor: pointer;
-      touch-action: none;
+      touch-action: pan-x;
       transition: transform 0.12s;
     }
 
@@ -191,6 +203,7 @@
       #trainBar {
         left: max(10px, env(safe-area-inset-left));
         transform: none;
+        max-width: calc(100vw - 110px);
         gap: 5px;
         padding: 6px;
       }
@@ -263,6 +276,9 @@
   </button>
   <div class="hold-hint">ながおしで<br>もどる</div>
 
+  <button class="btn" id="stopBtn" aria-label="とまる">
+    <svg viewBox="0 0 24 24"><rect x="4" y="9.5" width="16" height="5" rx="1.5" fill="#fff"/></svg>
+  </button>
   <button class="btn on" id="autoBtn" aria-label="じどうで はしる"></button>
   <button class="btn" id="camBtn" aria-label="カメラをかえる">
     <svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="#3d5a80"/><circle cx="12" cy="13.2" r="4" fill="#fff"/><circle cx="12" cy="13.2" r="2.4" fill="#3d5a80"/></svg>
@@ -288,13 +304,12 @@
     'use strict';
 
     // ===== せかい：1周 L のループ線路 =====
-    const L = 6400;
+    const L = 8400;
     const POS = {
       tunnelA: 200, tunnelB: 700,
-      mast: 1230,
-      cross: 1600,
-      stA: 2600, stB: 3900, stStop: 3250,
-      brA: 4500, brB: 5100
+      mast: 2050,
+      cross: 2650,
+      brA: 5900, brB: 6500
     };
     const GAP = 8;        // 車両どうしのすきま
     const JOINT = 180;    // レールのつなぎ目の間隔（ガタンゴトン）
@@ -315,39 +330,67 @@
     }
 
     // ===== でんしゃ =====
+    const SHIN_LOOKS = {
+      n700: { body: '#fbfcfe', body2: '#dde2ea', bands: [[-54, 10, '#1d4fa8'], [-39, 3, '#1d4fa8']], win: '#26344d' },
+      yellow: { body: '#ffdc3a', body2: '#e9b800', bands: [[-54, 10, '#1d4fa8'], [-39, 3, '#1d4fa8']], win: '#26344d' },
+      e5: { body: '#f6f8f8', body2: '#d5dbe0', top: '#0e8f6a', split: -58, bands: [[-58, 4, '#f07aa8']], win: '#1c2a3a', nose: 230 },
+      e6: { body: '#f6f8f8', body2: '#d5dbe0', top: '#c4102b', split: -60, bands: [[-60, 3, '#b9c0c7']], win: '#1c2a3a', nose: 200 },
+      zero: { body: '#f3efe2', body2: '#dcd6c4', bands: [[-87, 20, '#1f3f9a'], [-42, 8, '#1f3f9a']], win: '#1c2a40', nose: 120, round: true }
+    };
+    const shinSet = (look, n = 4) => [
+      { kind: 'shin', len: look.nose > 200 ? 360 : 330, nose: 1, look },
+      { kind: 'shin', len: 300, panto: true, look },
+      ...(n > 3 ? [{ kind: 'shin', len: 300, look }] : []),
+      { kind: 'shin', len: look.nose > 200 ? 360 : 330, nose: -1, look }
+    ];
+    const emuSet = () => [
+      { kind: 'emu', len: 290, cab: 1 },
+      { kind: 'emu', len: 290, panto: true },
+      { kind: 'emu', len: 290 },
+      { kind: 'emu', len: 290, cab: -1 }
+    ];
     const TRAINS = {
       shinkansen: {
         name: 'しんかんせん', horn: 'shin', motor: 'shin', hornText: 'ファーン！',
-        maxV: 1700, cruise: 950,
-        look: { body: '#fbfcfe', body2: '#dde2ea', stripe: '#1d4fa8', stripe2: '#1d4fa8', win: '#26344d' },
+        maxV: 1700, cruise: 950, cars: shinSet(SHIN_LOOKS.n700)
+      },
+      hayabusa: {
+        name: 'はやぶさ', horn: 'shin', motor: 'shin', hornText: 'ファーン！',
+        maxV: 1800, cruise: 1000, cars: shinSet(SHIN_LOOKS.e5)
+      },
+      komachi: {
+        name: 'こまち', horn: 'shin', motor: 'shin', hornText: 'ファーン！',
+        maxV: 1700, cruise: 950, cars: shinSet(SHIN_LOOKS.e6, 3)
+      },
+      hayakoma: {
+        name: 'はやぶさと こまち', horn: 'shin', motor: 'shin', hornText: 'ファーン！',
+        maxV: 1700, cruise: 950, iconPair: true,
         cars: [
-          { kind: 'shin', len: 330, nose: 1 },
-          { kind: 'shin', len: 300, panto: true },
-          { kind: 'shin', len: 300 },
-          { kind: 'shin', len: 330, nose: -1 }
+          { kind: 'shin', len: 360, nose: 1, look: SHIN_LOOKS.e5 },
+          { kind: 'shin', len: 360, nose: -1, panto: true, look: SHIN_LOOKS.e5 },
+          { kind: 'shin', len: 330, nose: 1, panto: true, look: SHIN_LOOKS.e6 },
+          { kind: 'shin', len: 330, nose: -1, look: SHIN_LOOKS.e6 }
         ]
       },
-      yamanote: {
-        name: 'やまのてせん', horn: 'emu', motor: 'emu', hornText: 'ファン ファン！',
-        maxV: 1200, cruise: 700,
-        look: { line: '#7cc242' },
-        cars: [
-          { kind: 'emu', len: 290, cab: 1 },
-          { kind: 'emu', len: 290, panto: true },
-          { kind: 'emu', len: 290 },
-          { kind: 'emu', len: 290, cab: -1 }
-        ]
+      zero: {
+        name: 'ぜろけい しんかんせん', horn: 'shin0', motor: 'shin', hornText: 'ファーン！',
+        maxV: 1400, cruise: 800, cars: shinSet(SHIN_LOOKS.zero)
       },
       yellow: {
         name: 'ドクターイエロー', horn: 'shin', motor: 'shin', hornText: 'ファーン！',
-        maxV: 1700, cruise: 900,
-        look: { body: '#ffdc3a', body2: '#e9b800', stripe: '#1d4fa8', stripe2: '#1d4fa8', win: '#26344d' },
-        cars: [
-          { kind: 'shin', len: 330, nose: 1 },
-          { kind: 'shin', len: 300, panto: true },
-          { kind: 'shin', len: 300 },
-          { kind: 'shin', len: 330, nose: -1 }
-        ]
+        maxV: 1700, cruise: 900, cars: shinSet(SHIN_LOOKS.yellow)
+      },
+      yamanote: {
+        name: 'やまのてせん', horn: 'emu', motor: 'emu', hornText: 'ファン ファン！',
+        maxV: 1200, cruise: 700, look: { line: '#7cc242' }, cars: emuSet()
+      },
+      chuo: {
+        name: 'ちゅうおうせん', horn: 'emu', motor: 'emu', hornText: 'ファン ファン！',
+        maxV: 1200, cruise: 750, look: { line: '#f15a22' }, cars: emuSet()
+      },
+      keihin: {
+        name: 'けいひんとうほくせん', horn: 'emu', motor: 'emu', hornText: 'ファン ファン！',
+        maxV: 1200, cruise: 700, look: { line: '#00b2e5' }, cars: emuSet()
       },
       sl: {
         name: 'エスエル', horn: 'steam', motor: 'sl', hornText: 'ポーッ！',
@@ -370,7 +413,7 @@
         ]
       }
     };
-    const ORDER = ['shinkansen', 'yamanote', 'yellow', 'sl', 'freight'];
+    const ORDER = ['shinkansen', 'hayabusa', 'komachi', 'hayakoma', 'zero', 'yellow', 'yamanote', 'chuo', 'keihin', 'sl', 'freight'];
 
     // 車輪の位置（つなぎ目の音を鳴らす場所）
     function axlesOf(car) {
@@ -427,21 +470,33 @@
     const xing = { active: false, hold: 0, onT: 0, bellT: 0, alt: 0, gate: 1, manualUntil: -1, arrow: 0 };
 
     // ===== 駅 =====
-    const st = { state: 'run', t: 0, still: 0, boardT: 0, skip: false, flags: {} };
-    const PEOPLE = [
-      { x: 180, h: 62, c: '#e85d75' },
-      { x: 225, h: 42, c: '#3f8ae0' },
-      { x: 520, h: 66, c: '#5bb85d' },
-      { x: 820, h: 60, c: '#f0a030' },
-      { x: 858, h: 40, c: '#9a6bd8' },
-      { x: 1100, h: 64, c: '#556070' }
+    // 停車位置：stop は電車のまん中、headStop は先頭（踏切の手前の小さな駅は先頭で合わせる）
+    const STATIONS = [
+      {
+        a: 1300, b: 2250, headStop: 2290, name: 'ゆうやけえき', small: true,
+        signs: [[560, '← トンネル', 'ふみきり →']],
+        people: [{ x: 300, h: 60, c: '#f0a030' }, { x: 340, h: 40, c: '#e85d75' }, { x: 760, h: 64, c: '#3f8ae0' }]
+      },
+      {
+        a: 3700, b: 5000, stop: 4350, name: 'みんなのえき',
+        signs: [[420, '← ふみきり', ''], [880, '', 'はし →']],
+        people: [
+          { x: 180, h: 62, c: '#e85d75' }, { x: 225, h: 42, c: '#3f8ae0' }, { x: 520, h: 66, c: '#5bb85d' },
+          { x: 820, h: 60, c: '#f0a030' }, { x: 858, h: 40, c: '#9a6bd8' }, { x: 1100, h: 64, c: '#556070' }
+        ]
+      }
     ];
-    let peopleAlpha = 1, peopleTarget = 1;
+    STATIONS.forEach(sn => { sn.peopleAlpha = 1; sn.peopleTarget = 1; sn.boardT = 0; });
+    const MAIN_STATION = STATIONS[1];
+    const st = { state: 'run', t: 0, still: 0, cur: -1, skip: -1, flags: {} };
+    let braking = false;
 
     // ===== ようす =====
     let night = 0, nightOn = false;
     let sunset = 0;
-    const mast = { playing: false, until: 0 };
+    const mast = { playing: false, until: 0, song: 0 };
+    const puffs = [];
+    let lastFart = -99;
     let tunnelHornDone = false;
     const smoke = [];
     const popups = [];
@@ -600,8 +655,8 @@
     const leadingRight = () => CS.dir >= 0;
 
     function carShin(car, T, G) {
-      const look = T.look;
-      const len = car.len, top = -98, bot = -22, n = 160;
+      const look = car.look || T.look;
+      const len = car.len, top = -98, bot = -22, n = look.nose || 160;
       const mir = car.nose === -1;
       const ang = CS.dist / 11 * (mir ? -1 : 1);
       ctx.save();
@@ -612,7 +667,11 @@
         ctx.moveTo(0, bot);
         ctx.lineTo(0, top + 12);
         ctx.quadraticCurveTo(0, top, 12, top);
-        if (car.nose) {
+        if (car.nose && look.round) {
+          ctx.lineTo(len - n, top);
+          ctx.bezierCurveTo(len - n * 0.25, top, len, top + 26, len, bot - 22);
+          ctx.quadraticCurveTo(len, bot, len - 14, bot);
+        } else if (car.nose) {
           ctx.lineTo(len - n, top);
           ctx.bezierCurveTo(len - n * 0.35, top, len - 6, bot - 36, len, bot - 8);
           ctx.quadraticCurveTo(len, bot, len - 12, bot);
@@ -625,9 +684,11 @@
       };
       const winEnd = car.nose ? len - n + 4 : len - 40;
       const doors = car.nose ? [12] : [12, len - 38];
+      const lampX = look.round ? len - 18 : len - 26;
+      const lampY = look.round ? bot - 26 : bot - 15;
       if (!G) {
         drawBogie(58, ang);
-        drawBogie(car.nose ? len - 90 : len - 58, ang);
+        drawBogie(car.nose ? len - Math.max(90, n * 0.55) : len - 58, ang);
         rr(8, bot - 4, len - (car.nose ? 50 : 16), 10, 3, '#8f99a5');
         const gr = ctx.createLinearGradient(0, top, 0, bot);
         gr.addColorStop(0, look.body);
@@ -638,17 +699,28 @@
         ctx.save();
         path();
         ctx.clip();
-        ctx.fillStyle = look.stripe;
-        ctx.fillRect(0, -54, len + 5, 10);
-        ctx.fillStyle = look.stripe2;
-        ctx.fillRect(0, -39, len + 5, 3);
+        if (look.top) {
+          ctx.fillStyle = look.top;
+          ctx.fillRect(0, top - 2, len + 5, look.split - top + 2);
+        }
+        look.bands.forEach(([y, h, c]) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(0, y, len + 5, h);
+        });
         for (let x = 46; x < winEnd - 14; x += 24) rr(x, -82, 14, 13, 3, look.win);
         if (car.nose) {
           ctx.beginPath();
-          ctx.moveTo(len - n + 30, top + 3);
-          ctx.quadraticCurveTo(len - n * 0.5, top + 1, len - n * 0.3, top + 20);
-          ctx.lineTo(len - n * 0.42, top + 25);
-          ctx.quadraticCurveTo(len - n * 0.64, top + 13, len - n + 30, top + 13);
+          if (look.round) {
+            ctx.moveTo(len - n + 14, top + 6);
+            ctx.quadraticCurveTo(len - n * 0.45, top + 4, len - n * 0.28, top + 16);
+            ctx.lineTo(len - n * 0.36, top + 22);
+            ctx.quadraticCurveTo(len - n * 0.6, top + 14, len - n + 14, top + 16);
+          } else {
+            ctx.moveTo(len - n + 30, top + 3);
+            ctx.quadraticCurveTo(len - n * 0.5, top + 1, len - n * 0.3, top + 20);
+            ctx.lineTo(len - n * 0.42, top + 25);
+            ctx.quadraticCurveTo(len - n * 0.64, top + 13, len - n + 30, top + 13);
+          }
           ctx.closePath();
           ctx.fillStyle = '#1b2433';
           ctx.fill();
@@ -663,17 +735,17 @@
         doors.forEach(x => drawDoor(x, 26, -90, -26, CS.doors, 'rgba(0, 0, 0, 0.3)', false));
         if (car.nose) {
           ctx.beginPath();
-          ctx.ellipse(len - 26, bot - 15, 8, 3.5, -0.25, 0, Math.PI * 2);
+          ctx.ellipse(lampX, lampY, look.round ? 6 : 8, look.round ? 6 : 3.5, -0.25, 0, Math.PI * 2);
           ctx.fillStyle = isLead ? '#fff7cf' : '#ff4545';
           ctx.fill();
         }
-        if (car.panto) drawPanto(len / 2, top);
+        if (car.panto) drawPanto(car.nose ? (len - n) / 2 + 20 : len / 2, top);
       } else {
         for (let x = 46; x < winEnd - 14; x += 24) rr(x, -82, 14, 13, 3, '#ffe7a3');
         doors.forEach(x => drawDoor(x, 26, -90, -26, CS.doors, '', true));
         if (car.nose) {
-          if (isLead) beam(len - 20, bot - 15);
-          else halo(len - 26, bot - 15, 16, 'rgba(255, 60, 60, 0.9)');
+          if (isLead) beam(lampX + 6, lampY);
+          else halo(lampX, lampY, 16, 'rgba(255, 60, 60, 0.9)');
         }
       }
       ctx.restore();
@@ -1014,7 +1086,7 @@
         return node;
       }
 
-      function tone({ f, f0, f2, type = 'sine', at = 0, attack = 0.005, hold = 0, dur = 0.3, vol = 0.2, pan = 0, echo = false }) {
+      function tone({ f, f0, f2, type = 'sine', at = 0, attack = 0.005, hold = 0, dur = 0.3, vol = 0.2, pan = 0, echo = false, dest = null }) {
         if (!ac) return;
         vol = Math.max(vol, 0.0003);
         const t = ac.currentTime + at;
@@ -1029,7 +1101,7 @@
         g.gain.setValueAtTime(vol, t + attack + hold);
         g.gain.exponentialRampToValueAtTime(0.0001, t + attack + hold + dur);
         o.connect(g);
-        g.connect(out(pan, echo));
+        g.connect(dest || out(pan, echo));
         o.start(t);
         o.stop(t + attack + hold + dur + 0.05);
       }
@@ -1103,6 +1175,8 @@
         if (kind === 'shin') {
           [440, 554].forEach(f => tone({ f, type: 'triangle', attack: 0.05, hold: 0.6, dur: 0.35, vol: 0.17 * vol, pan }));
           tone({ f: 880, attack: 0.05, hold: 0.6, dur: 0.3, vol: 0.05 * vol, pan });
+        } else if (kind === 'shin0') {
+          [349, 440].forEach(f => tone({ f, type: 'triangle', attack: 0.06, hold: 0.75, dur: 0.4, vol: 0.18 * vol, pan }));
         } else if (kind === 'emu') {
           [0, 0.4].forEach(at => [523, 659].forEach(f => tone({ f, type: 'triangle', at, attack: 0.02, hold: 0.22, dur: 0.12, vol: 0.16 * vol, pan })));
         } else if (kind === 'whistle') {
@@ -1149,25 +1223,107 @@
         }
       }
 
-      // パンザマストの夕方のチャイム（ドヴォルザーク「家路」の出だし）
-      const DO = 523.25, RE = 587.33, MI = 659.26, SO = 783.99;
-      const MELODY = [
-        [MI, 1.5], [SO, 0.5], [SO, 2], [MI, 1.5], [RE, 0.5], [DO, 2],
-        [RE, 1], [MI, 1], [SO, 1], [MI, 1], [RE, 4],
-        [MI, 1.5], [SO, 0.5], [SO, 2], [MI, 1.5], [RE, 0.5], [DO, 2],
-        [RE, 1], [MI, 1], [RE, 1.5], [DO, 0.5], [DO, 4]
+      // パンザマストの夕方のチャイム（押すたびに次の曲）
+      const NOTE = {
+        G3: 196.0, A3: 220.0, C4: 261.63, D4: 293.66, E4: 329.63, G4: 392.0, A4: 440.0,
+        C5: 523.25, D5: 587.33, E5: 659.26, G5: 783.99
+      };
+      const SONGS = [
+        {
+          // ドヴォルザーク「家路」の出だし（1拍 0.46 秒）
+          name: 'いえじ', unit: 0.46, oct: 1,
+          notes: 'E5:1.5 G5:.5 G5:2 E5:1.5 D5:.5 C5:2 D5:1 E5:1 G5:1 E5:1 D5:4 E5:1.5 G5:.5 G5:2 E5:1.5 D5:.5 C5:2 D5:1 E5:1 D5:1.5 C5:.5 C5:4'
+        },
+        {
+          // 草川信「夕焼け小焼け」（8分音符 0.3 秒）
+          name: 'ゆうやけこやけ', unit: 0.3, oct: 2,
+          notes: 'G4:2 G4:1 A4:1 G4:1 G4:1 G4:1 E4:1 C4:1 C4:1 D4:1 E4:1 D4:4 ' +
+            'E4:2 E4:1 G4:1 A4:1 C5:1 C5:1 A4:1 G4:1 G4:1 A4:1 G4:1 C5:4 ' +
+            'C5:1 D5:1 C5:1 A4:1 C5:1 C5:1 G4:1 G4:1 A4:1 G4:1 A4:1 G4:1 E4:4 ' +
+            'G4:1 E4:1 D4:1 C4:1 D4:1 C4:1 D4:2 E4:1 G4:1 A4:1 G4:1 C5:4'
+        },
+        {
+          // スコットランド民謡「蛍の光」の前半（1拍 0.5 秒）
+          name: 'ほたるのひかり', unit: 0.5, oct: 2,
+          notes: 'G3:1 C4:1.5 C4:.5 C4:1 E4:1 D4:1.5 C4:.5 D4:1 E4:1 C4:1.5 C4:.5 E4:1 G4:1 A4:3 ' +
+            'A4:1 G4:1.5 E4:.5 E4:1 C4:1 D4:1.5 C4:.5 D4:1 E4:1 C4:1.5 A3:.5 A3:1 G3:1 C4:3'
+        }
       ];
-      const BEAT = 0.46;
-      function melody(pan = 0) {
+      let songBus = null;
+      function song(i) {
         if (!ac) return 0;
+        // 鳴っている曲はすっと消して次の曲へ
+        if (songBus) {
+          const old = songBus;
+          old.gain.setTargetAtTime(0, ac.currentTime, 0.06);
+          setTimeout(() => old.disconnect(), 800);
+        }
+        songBus = ac.createGain();
+        songBus.connect(master);
+        songBus.connect(echoIn);
+        const S = SONGS[i % SONGS.length];
         let at = 0.05;
-        MELODY.forEach(([f, b]) => {
-          tone({ f, at, dur: 1.5, vol: 0.15, pan, echo: true });
-          tone({ f: f * 2, at, dur: 0.7, vol: 0.045, pan, echo: true });
-          tone({ f: f * 3.01, at, dur: 0.35, vol: 0.02, pan, echo: true });
-          at += b * BEAT;
+        S.notes.split(' ').forEach(tok => {
+          const [n, b] = tok.split(':');
+          const f = NOTE[n] * (S.oct === 2 ? 2 : 1);
+          tone({ f, at, dur: 1.5, vol: 0.15, dest: songBus });
+          tone({ f: f * 2, at, dur: 0.7, vol: 0.045, dest: songBus });
+          tone({ f: f * 3.01, at, dur: 0.35, vol: 0.02, dest: songBus });
+          at += parseFloat(b) * S.unit;
         });
         return at + 1.5;
+      }
+      const songName = (i) => SONGS[i % SONGS.length].name;
+
+      // ブレーキの「キキーッ」
+      function squeal(sec, pan = 0) {
+        if (!ac) return;
+        sec = clamp(sec, 0.3, 2.2);
+        tone({ f: 3100, f2: 2600, type: 'sine', attack: 0.05, hold: sec * 0.8, dur: sec * 0.25, vol: 0.05, pan });
+        tone({ f: 4650, f2: 3900, type: 'sine', attack: 0.05, hold: sec * 0.8, dur: sec * 0.25, vol: 0.02, pan });
+        noise({ dur: sec, vol: 0.05, freq: 3000, q: 8, pan, attack: 0.05 });
+      }
+
+      // 止まったあとの「プシュー」
+      function pshh(pan = 0) {
+        noise({ dur: 0.9, vol: 0.16, type: 'highpass', freq: 2500, q: 0.5, pan, attack: 0.02 });
+      }
+
+      // おなら（毎回ちがう長さと高さ）
+      function fart(pan = 0) {
+        if (!ac) return;
+        const t = ac.currentTime;
+        const short = Math.random() < 0.35;
+        const dur = short ? 0.1 + Math.random() * 0.1 : 0.35 + Math.random() * 0.6;
+        const f = short ? 130 + Math.random() * 60 : 60 + Math.random() * 60;
+        const o = ac.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(f * 1.25, t);
+        o.frequency.exponentialRampToValueAtTime(f * 0.75, t + dur);
+        const lfo = ac.createOscillator();
+        lfo.frequency.value = 16 + Math.random() * 22;
+        const lfoG = ac.createGain();
+        lfoG.gain.value = f * 0.4;
+        lfo.connect(lfoG);
+        lfoG.connect(o.frequency);
+        const lp = ac.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 650;
+        lp.Q.value = 5;
+        const g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.5, t + 0.015);
+        g.gain.setValueAtTime(0.45, t + dur * 0.8);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
+        o.connect(lp);
+        lp.connect(g);
+        g.connect(out(pan));
+        o.start(t);
+        lfo.start(t);
+        o.stop(t + dur + 0.1);
+        lfo.stop(t + dur + 0.1);
+        noise({ dur, vol: 0.06, freq: 300, q: 1.5, pan });
+        return short;
       }
 
       function sparkle() {
@@ -1232,7 +1388,7 @@
         else ac.resume();
       }
 
-      return { init, bell, click, chuff, horn, doorChime, carSound, melody, sparkle, pop, motorUpdate, suspend };
+      return { init, bell, click, chuff, horn, doorChime, carSound, song, songName, squeal, pshh, fart, sparkle, pop, motorUpdate, suspend };
     })();
 
     // 読み上げ（使えない端末では何もしない）
@@ -1308,7 +1464,7 @@
 
     function busy(x, m = 0) {
       const near = (a, b) => mod(x - a + m, L) < (b - a) + 2 * m;
-      return near(POS.cross - 260, POS.cross + 260) || near(POS.stA - 60, POS.stB + 60) ||
+      return near(POS.cross - 260, POS.cross + 260) || STATIONS.some(sn => near(sn.a - 60, sn.b + 60)) ||
         near(POS.brA - 50, POS.brB + 50) || near(POS.tunnelA - 150, POS.tunnelB + 150) || near(POS.mast - 80, POS.mast + 80);
     }
 
@@ -2043,24 +2199,27 @@
     }
 
     function drawStationBack(G) {
-      const x0 = rangeX(POS.stA, POS.stB);
-      if (x0 === null) return;
-      const len = POS.stB - POS.stA;
-      ctx.save();
-      ctx.translate(x0, trackY);
-      ctx.scale(s, s);
-      if (G) {
-        for (let x = 80; x < len; x += 160) halo(x, -190, 40, 'rgba(255, 250, 220, 0.9)');
+      STATIONS.forEach(sn => {
+        if (sn.small) return;
+        const x0 = rangeX(sn.a, sn.b);
+        if (x0 === null) return;
+        const len = sn.b - sn.a;
+        ctx.save();
+        ctx.translate(x0, trackY);
+        ctx.scale(s, s);
+        if (G) {
+          for (let x = 80; x < len; x += 160) halo(x, -190, 40, 'rgba(255, 250, 220, 0.9)');
+          ctx.restore();
+          return;
+        }
+        for (let x = 0; x <= len; x += 160) rr(x - 5, -204, 10, 186, 2, '#7d8a96');
+        ctx.fillStyle = '#5d6b79';
+        ctx.fillRect(-20, -218, len + 40, 16);
+        ctx.fillStyle = '#46525e';
+        ctx.fillRect(-20, -202, len + 40, 4);
+        for (let x = 80; x < len; x += 160) rr(x - 14, -199, 28, 5, 2, '#fff8dc');
         ctx.restore();
-        return;
-      }
-      for (let x = 0; x <= len; x += 160) rr(x - 5, -204, 10, 186, 2, '#7d8a96');
-      ctx.fillStyle = '#5d6b79';
-      ctx.fillRect(-20, -218, len + 40, 16);
-      ctx.fillStyle = '#46525e';
-      ctx.fillRect(-20, -202, len + 40, 4);
-      for (let x = 80; x < len; x += 160) rr(x - 14, -199, 28, 5, 2, '#fff8dc');
-      ctx.restore();
+      });
     }
 
     function drawPerson(p) {
@@ -2077,54 +2236,59 @@
     }
 
     function drawStationFront() {
-      const x0 = rangeX(POS.stA, POS.stB);
-      if (x0 === null) return;
-      const len = POS.stB - POS.stA;
-      ctx.save();
-      ctx.translate(x0, trackY);
-      ctx.scale(s, s);
-      ctx.fillStyle = '#d9d5ca';
-      ctx.fillRect(0, -20, len, 9);
-      ctx.fillStyle = '#f2c200';
-      ctx.fillRect(0, -18, len, 3);
-      ctx.fillStyle = '#b3ada0';
-      ctx.fillRect(0, -11, len, 70);
-      ctx.fillStyle = '#e8e4d8';
-      ctx.fillRect(0, -11, len, 3);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-      for (let x = 60; x < len; x += 120) ctx.fillRect(x, -8, 3, 67);
-      if (peopleAlpha > 0.01) {
-        ctx.globalAlpha = peopleAlpha;
-        PEOPLE.forEach(p => {
-          ctx.save();
-          ctx.translate(p.x, -20 + (1 - peopleAlpha) * 10);
-          drawPerson(p);
-          ctx.restore();
+      STATIONS.forEach(sn => {
+        const x0 = rangeX(sn.a, sn.b);
+        if (x0 === null) return;
+        const len = sn.b - sn.a;
+        ctx.save();
+        ctx.translate(x0, trackY);
+        ctx.scale(s, s);
+        ctx.fillStyle = '#d9d5ca';
+        ctx.fillRect(0, -20, len, 9);
+        ctx.fillStyle = '#f2c200';
+        ctx.fillRect(0, -18, len, 3);
+        ctx.fillStyle = '#b3ada0';
+        ctx.fillRect(0, -11, len, 70);
+        ctx.fillStyle = '#e8e4d8';
+        ctx.fillRect(0, -11, len, 3);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        for (let x = 60; x < len; x += 120) ctx.fillRect(x, -8, 3, 67);
+        if (sn.peopleAlpha > 0.01) {
+          ctx.globalAlpha = sn.peopleAlpha;
+          sn.people.forEach(p => {
+            ctx.save();
+            ctx.translate(p.x, -20 + (1 - sn.peopleAlpha) * 10);
+            drawPerson(p);
+            ctx.restore();
+          });
+          ctx.globalAlpha = 1;
+        }
+        // 駅名の看板
+        sn.signs.forEach(([x, left, right]) => {
+          ctx.fillStyle = '#6c7a86';
+          ctx.fillRect(x - 56, -66, 6, 48);
+          ctx.fillRect(x + 50, -66, 6, 48);
+          rr(x - 74, -120, 148, 58, 6, '#ffffff');
+          ctx.strokeStyle = '#9aa3aa';
+          ctx.lineWidth = 2;
+          rrPath(x - 74, -120, 148, 58, 6);
+          ctx.stroke();
+          ctx.fillStyle = sn.small ? '#e0662a' : '#2f9a4e';
+          ctx.fillRect(x - 72, -78, 144, 12);
+          ctx.fillStyle = '#222';
+          ctx.font = '900 24px "Zen Maru Gothic", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(sn.name, x, -97);
+          ctx.fillStyle = '#fff';
+          ctx.font = '700 9px "Zen Maru Gothic", sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(left, x - 66, -72);
+          ctx.textAlign = 'right';
+          ctx.fillText(right, x + 66, -72);
         });
-        ctx.globalAlpha = 1;
-      }
-      // 駅名の看板
-      [420, len - 420].forEach((x, i) => {
-        ctx.fillStyle = '#6c7a86';
-        ctx.fillRect(x - 56, -66, 6, 48);
-        ctx.fillRect(x + 50, -66, 6, 48);
-        rr(x - 74, -120, 148, 58, 6, '#ffffff');
-        ctx.strokeStyle = '#9aa3aa';
-        ctx.lineWidth = 2;
-        rrPath(x - 74, -120, 148, 58, 6);
-        ctx.stroke();
-        ctx.fillStyle = '#2f9a4e';
-        ctx.fillRect(x - 72, -78, 144, 12);
-        ctx.fillStyle = '#222';
-        ctx.font = '900 24px "Zen Maru Gothic", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('みんなのえき', x, -97);
-        ctx.fillStyle = '#fff';
-        ctx.font = '700 9px "Zen Maru Gothic", sans-serif';
-        ctx.fillText(i ? 'はし →' : '← ふみきり', x, -72);
+        ctx.restore();
       });
-      ctx.restore();
     }
 
     function drawSmoke() {
@@ -2136,6 +2300,19 @@
         ctx.beginPath();
         ctx.arc(x, trackY + p.y * s, p.r * s, 0, Math.PI * 2);
         ctx.fill();
+      });
+    }
+
+    function drawPuffs() {
+      puffs.forEach(p => {
+        const a = clamp(1 - p.t / 1.6, 0, 1);
+        const r = (14 + p.t * 40) * clamp(s, 0.7, 1.4);
+        ctx.fillStyle = `rgba(200, 210, 90, ${0.55 * a})`;
+        [[-0.8, 0.2], [0, -0.4], [0.8, 0.1]].forEach(([dx, dy]) => {
+          ctx.beginPath();
+          ctx.arc(p.x + dx * r, p.y + dy * r - p.t * 30, r * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
       });
     }
 
@@ -2233,6 +2410,7 @@
         }
         ctx.restore();
       }
+      drawPuffs();
       drawPopups();
       drawOffscreen();
     }
@@ -2249,12 +2427,30 @@
         drag.pending = 0;
         const meas = (train.p - prevP) / dt;
         train.v = clamp(lerp(train.v, meas, 0.35), -T.maxV, T.maxV);
+        braking = false;
       } else {
-        if (auto) {
+        if (braking) {
+          // とまるボタン：キキーッと止まって、プシュー
+          const dec = 650 * dt;
+          if (Math.abs(train.v) <= dec) {
+            train.v = 0;
+            braking = false;
+            Snd.pshh(panOf(sxOf(trainCenter())));
+          } else {
+            train.v -= Math.sign(train.v) * dec;
+          }
+        } else if (auto) {
           let target = T.cruise * autoDir;
           if (st.state === 'dwell' || st.state === 'manual') target = 0;
-          else if (!T.noStop && !st.skip) {
-            const d = autoDir > 0 ? mod(POS.stStop - center, L) : mod(center - POS.stStop, L);
+          else if (!T.noStop) {
+            // 進む向きでいちばん近い駅（出たばかりの駅は除く）
+            let d = Infinity, next = -1;
+            STATIONS.forEach((sn, i) => {
+              if (i === st.skip) return;
+              const sc = stopCenter(sn);
+              const di = autoDir > 0 ? mod(sc - center, L) : mod(center - sc, L);
+              if (di < d) { d = di; next = i; }
+            });
             if (d < 2400) {
               const vmax = Math.max(18, Math.sqrt(2 * 300 * Math.max(0, d - 1)));
               if (Math.abs(target) > vmax) target = autoDir * vmax;
@@ -2262,6 +2458,7 @@
                 train.v = 0;
                 target = 0;
                 st.state = 'dwell';
+                st.cur = next;
                 st.t = 0;
                 st.flags = {};
               }
@@ -2347,15 +2544,21 @@
       Snd.doorChime(panOf(sxOf(trainCenter())));
     }
 
+    function stopCenter(sn) {
+      return sn.headStop !== undefined ? sn.headStop - curT().len / 2 : sn.stop;
+    }
+
     function updateStation(dt) {
       const T = curT();
-      const off = wrap(trainCenter() - POS.stStop);
-      if (st.skip && Math.abs(off) > 600) st.skip = false;
+      const c = trainCenter();
+      if (st.skip >= 0 && Math.abs(wrap(c - stopCenter(STATIONS[st.skip]))) > 600) st.skip = -1;
       if (st.state === 'run') {
-        if (!T.noStop && !auto && !drag.active && Math.abs(train.v) < 4 && Math.abs(off) < 260) {
+        const i = STATIONS.findIndex(sn => Math.abs(wrap(c - stopCenter(sn))) < 260);
+        if (!T.noStop && !auto && !drag.active && i >= 0 && Math.abs(train.v) < 4) {
           st.still += dt;
           if (st.still > 0.7) {
             st.state = 'manual';
+            st.cur = i;
             openDoors();
           }
         } else {
@@ -2376,21 +2579,31 @@
         if (st.t > 0.5 && !st.flags.opened) { st.flags.opened = true; openDoors(); }
         if (st.t > 5.0 && !st.flags.say) { st.flags.say = true; say('ドアが しまります'); }
         if (st.t > 6.4 && !st.flags.closed) { st.flags.closed = true; closeDoors(); }
-        if (st.t > 7.8 || drag.active || !auto) {
-          if (st.t <= 7.8) closeDoors();
-          if (st.t > 7.8) blowHorn(0.6);
+        if (drag.active) {
+          closeDoors();
           st.state = 'run';
-          st.skip = true;
+          st.skip = st.cur;
+        } else if (!auto) {
+          // とまるボタンや ▶ でじどうをやめたら、その駅に止まったまま
+          if (!st.flags.opened) openDoors();
+          st.state = 'manual';
+        } else if (st.t > 7.8) {
+          blowHorn(0.6);
+          st.state = 'run';
+          st.skip = st.cur;
         }
       }
       train.doors += clamp(train.doorTarget - train.doors, -dt * 1.6, dt * 1.6);
-      if (train.doors > 0.95) st.boardT += dt;
-      if (st.boardT > 1.0) peopleTarget = 0;
-      if (Math.abs(off) > 1800 && train.doors < 0.05) {
-        st.boardT = 0;
-        peopleTarget = 1;
-      }
-      peopleAlpha += clamp(peopleTarget - peopleAlpha, -dt * 1.5, dt * 1.5);
+      STATIONS.forEach(sn => {
+        const off = Math.abs(wrap(c - stopCenter(sn)));
+        if (off < 300 && train.doors > 0.95) sn.boardT += dt;
+        if (sn.boardT > 1.0) sn.peopleTarget = 0;
+        if (off > 1800 && train.doors < 0.05) {
+          sn.boardT = 0;
+          sn.peopleTarget = 1;
+        }
+        sn.peopleAlpha += clamp(sn.peopleTarget - sn.peopleAlpha, -dt * 1.5, dt * 1.5);
+      });
     }
 
     function crossingWanted() {
@@ -2402,6 +2615,10 @@
       if (v > 20 && dh > 0 && dh < 260 + v * 2.2) return true;
       if (v < -20 && dt_ < 0 && -dt_ < 260 - v * 2.2) return true;
       if (Math.abs(v) <= 20 && ((dh > 0 && dh < 170) || (dt_ < 0 && dt_ > -170))) return true;
+      // 踏切のすぐ手前の駅：発車前（ドアが閉まるころ）から鳴らして、遮断機を下ろしておく
+      if (st.state === 'dwell' && st.t > 4.5) {
+        if ((autoDir > 0 && dh > 0 && dh < 700) || (autoDir < 0 && dt_ < 0 && dt_ > -700)) return true;
+      }
       return false;
     }
 
@@ -2494,8 +2711,8 @@
     function updateCamera(dt) {
       const mode = CAM_MODES[camMode];
       let tgt;
-      if (mode === 'cross') tgt = POS.cross - 150;
-      else if (mode === 'station') tgt = POS.stStop;
+      if (mode === 'cross') tgt = POS.cross - 250;
+      else if (mode === 'station') tgt = MAIN_STATION.stop;
       else tgt = trainCenter() + train.v * 0.3;
       const diff = wrap(tgt - camX);
       const k = mode === 'train' ? Math.min(1, dt * 4) : Math.min(1, dt * 2.4);
@@ -2514,6 +2731,8 @@
       if (mast.playing && time > mast.until) mast.playing = false;
       sunset += clamp((mast.playing ? 1 : 0) - sunset, -dt * 0.35, dt * 0.5);
       popups.forEach(p => { p.t += dt; });
+      puffs.forEach(p => { p.t += dt; });
+      while (puffs.length && puffs[0].t > 1.6) puffs.shift();
       while (popups.length && popups[0].t > 1.5) popups.shift();
     }
 
@@ -2523,6 +2742,20 @@
       const sx = clamp(W / 2 + wrap(train.p - camX) * s, 70, W - 70);
       Snd.horn(T.horn, panOf(sx), vol * volOf(sx) + 0.2);
       popup(T.hornText, sx, trackY - 170 * s, '#fff');
+    }
+
+    // たまにおなら（つづけては鳴らない）
+    function maybeFart(chance) {
+      if (time - lastFart < 4 || Math.random() > chance) return false;
+      lastFart = time;
+      return true;
+    }
+
+    function fartAt(x, y) {
+      const short = Snd.fart(panOf(x));
+      const words = short ? ['ぷっ！', 'ブッ！'] : ['ぷぅ〜', 'ブリッ！', 'プ〜〜！', 'ぶぉっ！'];
+      popup(words[Math.floor(Math.random() * words.length)], x, y - 30 * s, '#ffe08a');
+      puffs.push({ x, y, t: 0 });
     }
 
     function tapAt(x, y) {
@@ -2535,17 +2768,20 @@
           return;
         }
         if (b.kind === 'mast') {
-          if (!mast.playing) {
-            const len = Snd.melody(panOf(x));
-            mast.playing = true;
-            mast.until = time + len;
-            popup('♪', x, y - 20, '#fff6a0');
-          }
+          const len = Snd.song(mast.song);
+          popup('♪ ' + Snd.songName(mast.song), x, y + 40 * s, '#fff6a0');
+          mast.song++;
+          mast.playing = true;
+          mast.until = time + len;
           return;
         }
         if (b.kind === 'veh') {
           const v = b.ref;
           v.bump = 1;
+          if (maybeFart(0.15)) {
+            fartAt(x, y);
+            return;
+          }
           const k = v.def.kind;
           if (k === 'ambulance' || k === 'police' || k === 'fire') v.sirenUntil = time + 3.6;
           Snd.carSound(k, panOf(x));
@@ -2558,7 +2794,8 @@
           return;
         }
         if (b.kind === 'train') {
-          blowHorn();
+          if (maybeFart(0.12)) fartAt(x, y);
+          else blowHorn();
           return;
         }
         if (b.kind === 'arrow') {
@@ -2566,7 +2803,8 @@
           return;
         }
       }
-      Snd.pop();
+      if (maybeFart(0.3)) fartAt(x, y);
+      else Snd.pop();
     }
 
     canvas.addEventListener('pointerdown', (e) => {
@@ -2613,7 +2851,26 @@
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, () => el.classList.remove('pressed')));
     }
 
-    pressable(document.getElementById('hornBtn'), () => blowHorn());
+    pressable(document.getElementById('hornBtn'), () => {
+      if (maybeFart(0.1)) fartAt(clamp(W / 2 + wrap(train.p - camX) * s, 70, W - 70), trackY - 120 * s);
+      else blowHorn();
+    });
+
+    // とまるボタン
+    pressable(document.getElementById('stopBtn'), () => {
+      auto = false;
+      paintAuto();
+      const sx = sxOf(trainCenter());
+      if (Math.abs(train.v) > 60) {
+        braking = true;
+        Snd.squeal(Math.abs(train.v) / 650, panOf(sx));
+        popup('キキーッ！', clamp(sx, 80, W - 80), trackY - 170 * s, '#fff');
+      } else {
+        train.v = 0;
+        Snd.pshh(panOf(sx));
+        popup('プシュー', clamp(sx, 80, W - 80), trackY - 170 * s, '#fff');
+      }
+    });
 
     const autoBtn = document.getElementById('autoBtn');
     function paintAuto() {
@@ -2660,24 +2917,48 @@
       b.appendChild(cv);
       trainBar.appendChild(b);
       tButtons[key] = b;
-      const car = T.cars[0];
-      const span = Math.min(car.len, 200);
-      const kk = Math.min(168 / span, 108 / 145);
       const keep = { ctx, CS };
       ctx = cv.getContext('2d');
       CS = { doors: 0, dist: 0, dir: 1 };
-      ctx.translate(176 - 6 - car.len * kk, 116);
-      ctx.scale(kk, kk);
-      ctx.fillStyle = '#9aa0a6';
-      ctx.fillRect(-20, -4, car.len + 40, 4);
-      CAR_DRAW[car.kind](car, T, false);
+      if (T.iconPair) {
+        // はやぶさとこまち：鼻と鼻がくっついているところ
+        const kk = 0.36;
+        ctx.translate(88, 116);
+        ctx.scale(kk, kk);
+        ctx.fillStyle = '#9aa0a6';
+        ctx.fillRect(-260, -4, 520, 4);
+        const left = T.cars[2], right = T.cars[1];
+        ctx.save();
+        ctx.translate(-left.len - GAP / 2, 0);
+        CAR_DRAW.shin(left, T, false);
+        ctx.restore();
+        ctx.save();
+        ctx.translate(GAP / 2, 0);
+        CAR_DRAW.shin(right, T, false);
+        ctx.restore();
+      } else {
+        const car = T.cars[0];
+        const span = Math.min(car.len, 200);
+        const kk = Math.min(168 / span, 108 / 145);
+        ctx.translate(176 - 6 - car.len * kk, 116);
+        ctx.scale(kk, kk);
+        ctx.fillStyle = '#9aa0a6';
+        ctx.fillRect(-20, -4, car.len + 40, 4);
+        CAR_DRAW[car.kind](car, T, false);
+      }
       ctx = keep.ctx;
       CS = keep.CS;
-      pressable(b, () => chooseTrain(key));
+      // 列を指でスクロールできるよう、えらぶのは「タップ」だけ
+      b.addEventListener('click', () => {
+        Snd.init();
+        chooseTrain(key);
+      });
     });
 
     function paintTrainButtons() {
       ORDER.forEach(k => tButtons[k].classList.toggle('on', k === train.type));
+      const on = tButtons[train.type];
+      trainBar.scrollTo({ left: on.offsetLeft - trainBar.clientWidth / 2 + on.clientWidth / 2, behavior: 'smooth' });
     }
 
     function chooseTrain(key) {
@@ -2686,7 +2967,8 @@
         train.doors = 0;
         train.doorTarget = 0;
         st.state = 'run';
-        st.skip = false;
+        st.skip = -1;
+        braking = false;
         train.v = Math.min(Math.abs(train.v), TRAINS[key].maxV) * Math.sign(train.v);
         try { localStorage.setItem('trainTownTrain', key); } catch (e) {}
       }

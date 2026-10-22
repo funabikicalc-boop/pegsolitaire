@@ -153,6 +153,7 @@
     .cabinet.bubble { --glow: rgba(60, 200, 255, 0.35); --top: linear-gradient(180deg, #1aa6c9, #0b4f7a); }
     .cabinet.peg { --glow: rgba(255, 160, 60, 0.35); --top: linear-gradient(180deg, #e0703a, #6b2350); }
     .cabinet.gem { --glow: rgba(150, 120, 255, 0.4); --top: linear-gradient(180deg, #7a4dff, #2a1f6b); }
+    .cabinet.train { --glow: rgba(255, 210, 60, 0.4); --top: linear-gradient(180deg, #2fb36a, #145a7a); }
 
     /* 筐体の上の看板 */
     .cab-top {
@@ -525,6 +526,66 @@
         <p class="cab-desc">ブロックを押し、水を渡り、石像の目をかいくぐって宝玉を集めよう。じっくり考える塔のぼりパズル。</p>
         <div class="tags"><span class="tag">パズル</span><span class="tag">試作版</span></div>
         <span class="slot-btn green cab-play">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+          PLAY
+        </span>
+      </div>
+    </a>
+
+    <a href="train-town.html" class="cabinet train">
+      <div class="cab-top">
+        <div class="cab-title"><span class="w">Train</span> <span class="w">Town</span></div>
+        <div class="cab-sub">でんしゃと ふみきり</div>
+        <span class="badge">つづきから</span>
+      </div>
+      <div class="cab-screen">
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="ttSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#56aef0"/><stop offset="1" stop-color="#c7ebff"/></linearGradient>
+            <radialGradient id="ttLamp"><stop offset="0" stop-color="#ff5040" stop-opacity="0.9"/><stop offset="1" stop-color="#ff5040" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect width="320" height="180" fill="url(#ttSky)"/>
+          <circle cx="250" cy="34" r="16" fill="#ffd84a"/>
+          <path d="M0 78 Q60 50 120 70 T240 62 T320 70 V90 H0Z" fill="#7fb86a"/>
+          <rect y="80" width="320" height="100" fill="#8fcf63"/>
+          <!-- 道路 -->
+          <path d="M150 80 H170 L250 180 H70 Z" fill="#6d7178"/>
+          <path d="M159 84 h2 v6 h-2z M158 96 h4 v8 h-4z M157 112 h6 v10 h-6z" fill="#f2f2f2"/>
+          <!-- パンザマスト -->
+          <rect x="38" y="30" width="5" height="88" fill="#9fb0a2"/>
+          <path d="M43 40 l12 -4 v12 z M38 40 l-12 -4 v12 z M43 54 l12 -4 v12 z M38 54 l-12 -4 v12 z" fill="#e1e6e8"/>
+          <!-- 架線と線路 -->
+          <line x1="0" y1="78" x2="320" y2="78" stroke="#3d4247" stroke-width="1"/>
+          <rect y="128" width="320" height="6" fill="#a19b90"/>
+          <rect y="126" width="320" height="2" fill="#c8ccd0"/>
+          <!-- 新幹線 -->
+          <g>
+            <path d="M-10 92 H210 C250 92 268 112 272 124 Q272 127 266 127 H-10 Z" fill="#fbfcfe" stroke="#9aa3ad" stroke-width="1"/>
+            <rect x="-10" y="111" width="282" height="4" fill="#1d4fa8"/>
+            <path d="M208 95 Q228 94 238 103 L233 105 Q224 99 208 99 Z" fill="#1b2433"/>
+            <g fill="#26344d"><rect x="6" y="99" width="6" height="5" rx="1"/><rect x="18" y="99" width="6" height="5" rx="1"/><rect x="30" y="99" width="6" height="5" rx="1"/><rect x="42" y="99" width="6" height="5" rx="1"/><rect x="54" y="99" width="6" height="5" rx="1"/><rect x="66" y="99" width="6" height="5" rx="1"/><rect x="78" y="99" width="6" height="5" rx="1"/><rect x="104" y="99" width="6" height="5" rx="1"/><rect x="116" y="99" width="6" height="5" rx="1"/><rect x="128" y="99" width="6" height="5" rx="1"/><rect x="140" y="99" width="6" height="5" rx="1"/><rect x="152" y="99" width="6" height="5" rx="1"/><rect x="164" y="99" width="6" height="5" rx="1"/><rect x="176" y="99" width="6" height="5" rx="1"/></g>
+            <rect x="92" y="92" width="4" height="35" fill="#9aa3ad"/>
+            <g fill="#1d1f23"><circle cx="20" cy="127" r="4"/><circle cx="32" cy="127" r="4"/><circle cx="150" cy="127" r="4"/><circle cx="162" cy="127" r="4"/><circle cx="220" cy="127" r="4"/><circle cx="232" cy="127" r="4"/></g>
+          </g>
+          <!-- 手前の踏切 -->
+          <g>
+            <rect x="282" y="56" width="5" height="104" fill="#f6c300"/>
+            <g fill="#1d1d1d"><rect x="282" y="66" width="5" height="8"/><rect x="282" y="82" width="5" height="8"/><rect x="282" y="98" width="5" height="8"/><rect x="282" y="114" width="5" height="8"/><rect x="282" y="130" width="5" height="8"/><rect x="282" y="146" width="5" height="8"/></g>
+            <g transform="translate(284.5 50)"><rect x="-16" y="-3" width="32" height="6" fill="#f6c300" transform="rotate(45)"/><rect x="-16" y="-3" width="32" height="6" fill="#f6c300" transform="rotate(-45)"/></g>
+            <rect x="263" y="66" width="43" height="16" rx="8" fill="#1b1b1b"/>
+            <circle cx="273" cy="74" r="12" fill="url(#ttLamp)"/>
+            <circle cx="273" cy="74" r="5" fill="#ff3030"/>
+            <circle cx="296" cy="74" r="5" fill="#4a1212"/>
+            <rect x="248" y="150" width="40" height="5" fill="#f6c300"/>
+            <g fill="#1d1d1d"><rect x="256" y="150" width="8" height="5"/><rect x="272" y="150" width="8" height="5"/></g>
+          </g>
+        </svg>
+      </div>
+      <div class="cab-body">
+        <p class="cab-catch">ゆびで でんしゃを うごかそう</p>
+        <p class="cab-desc">電車を指でスーッと動かしたり、踏切をタッチしてカンカン鳴らしたり。新幹線・SL・貨物列車も走る、小さな子向けの乗り物あそび。</p>
+        <div class="tags"><span class="tag">のりもの</span><span class="tag">3さいから</span></div>
+        <span class="slot-btn blue cab-play">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
           PLAY
         </span>

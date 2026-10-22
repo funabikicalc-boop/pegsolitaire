@@ -507,6 +507,9 @@
     // ===== 画面 =====
     const canvas = document.getElementById('world');
     let ctx = canvas.getContext('2d');
+    // 電車より手前の物（ホーム・トンネルの山など）を描く層。夕方・夜は暗くしてから重ねる
+    const frontCanvas = document.createElement('canvas');
+    const frontCtx = frontCanvas.getContext('2d');
     let W = 0, H = 0, DPR = 1, s = 1, trackY = 0, hy = 0, zT = 2.3;
 
     function layout() {
@@ -515,6 +518,8 @@
       DPR = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.round(W * DPR);
       canvas.height = Math.round(H * DPR);
+      frontCanvas.width = canvas.width;
+      frontCanvas.height = canvas.height;
       s = Math.min(H / 640, W / 600);
       hy = H * 0.4;
       trackY = Math.round(H * 0.66);
@@ -1244,6 +1249,8 @@
             'A4:1 G4:1.5 E4:.5 E4:1 C4:1 D4:1.5 C4:.5 D4:1 E4:1 C4:1.5 A3:.5 A3:1 G3:1 C4:3'
         }
       ];
+      // 曲の速さ：1 で楽譜どおり、大きいほどゆっくり（防災無線のチャイムのように）
+      const SONG_SLOW = 1.4;
       let songBus = null;
       function song(i) {
         if (!ac) return 0;
@@ -1261,12 +1268,12 @@
         S.notes.split(' ').forEach(tok => {
           const [n, b] = tok.split(':');
           const f = NOTE[n] * (S.oct === 2 ? 2 : 1);
-          tone({ f, at, dur: 1.5, vol: 0.15, dest: songBus });
-          tone({ f: f * 2, at, dur: 0.7, vol: 0.045, dest: songBus });
-          tone({ f: f * 3.01, at, dur: 0.35, vol: 0.02, dest: songBus });
-          at += parseFloat(b) * S.unit;
+          tone({ f, at, dur: 1.9, vol: 0.15, dest: songBus });
+          tone({ f: f * 2, at, dur: 0.9, vol: 0.045, dest: songBus });
+          tone({ f: f * 3.01, at, dur: 0.45, vol: 0.02, dest: songBus });
+          at += parseFloat(b) * S.unit * SONG_SLOW;
         });
-        return at + 1.5;
+        return at + 1.9;
       }
       const songName = (i) => SONGS[i % SONGS.length].name;
 
@@ -2379,30 +2386,58 @@
       drawTrain(false);
       drawSmoke();
       drawWire();
-      drawStationFront();
-      drawTruss();
-      drawTunnel();
-      if (roadOn) drawCrossingSide(cx, true, false);
-
-      // 夕焼けと夜
-      if (sunset > 0.01) {
-        ctx.fillStyle = `rgba(255, 130, 50, ${0.16 * sunset})`;
-        ctx.fillRect(0, 0, W, H);
-      }
-      if (night > 0.01) {
-        ctx.fillStyle = `rgba(8, 14, 50, ${0.55 * night})`;
-        ctx.fillRect(0, 0, W, H);
-        ctx.save();
-        ctx.globalAlpha = night;
-        drawHouses(true);
-        drawStationBack(true);
-        drawMast(true);
-        drawTrain(true);
-        if (roadOn) {
-          drawCrossingSide(cx, false, true);
-          drawCrossingSide(cx, true, true);
+      const tinted = sunset > 0.01 || night > 0.01;
+      const tint = () => {
+        if (sunset > 0.01) {
+          ctx.fillStyle = `rgba(255, 130, 50, ${0.16 * sunset})`;
+          ctx.fillRect(0, 0, W, H);
         }
-        ctx.restore();
+        if (night > 0.01) {
+          ctx.fillStyle = `rgba(8, 14, 50, ${0.55 * night})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      };
+      const drawFront = () => {
+        drawStationFront();
+        drawTruss();
+        drawTunnel();
+        if (roadOn) drawCrossingSide(cx, true, false);
+      };
+      if (!tinted) {
+        drawFront();
+      } else {
+        // 奥と電車：暗くしてから窓やライトの明かり
+        tint();
+        if (night > 0.01) {
+          ctx.save();
+          ctx.globalAlpha = night;
+          drawHouses(true);
+          drawStationBack(true);
+          drawMast(true);
+          drawTrain(true);
+          if (roadOn) drawCrossingSide(cx, false, true);
+          ctx.restore();
+        }
+        // 手前：別の層に描いて、描いたところだけ暗くしてから重ねる（電車の明かりを隠す）
+        const main = ctx;
+        ctx = frontCtx;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, frontCanvas.width, frontCanvas.height);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        drawFront();
+        ctx.globalCompositeOperation = 'source-atop';
+        tint();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx = main;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(frontCanvas, 0, 0);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        if (night > 0.01 && roadOn) {
+          ctx.save();
+          ctx.globalAlpha = night;
+          drawCrossingSide(cx, true, true);
+          ctx.restore();
+        }
       }
       drawPuffs();
       drawPopups();

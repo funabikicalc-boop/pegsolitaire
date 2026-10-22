@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#3f8fd8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Sky Village</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Outfit:wght@600;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="arcade.css">
+  <style>
+    :root {
+      /* 上パネル（空に浮かぶ島）の高さ */
+      --stage: clamp(92px, 16vh, 180px);
+      /* 盤面と下のボタンの間の余白（背の高い画面ほど広く） */
+      --controls-gap: clamp(6px, calc(7vh - 40px), 30px);
+      /* 盤面（金枠ごと）の一辺。横幅いっぱいを基本に、背の低い画面では高さに合わせて縮める */
+      --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100vh - var(--stage) - var(--controls-gap) - 250px));
+    }
+
+    @supports (height: 100dvh) {
+      :root {
+        --stage: clamp(92px, 16dvh, 180px);
+        --controls-gap: clamp(6px, calc(7dvh - 40px), 30px);
+        --frame: min(calc(100vw - var(--gutter) * 2), 420px, calc(100dvh - var(--stage) - var(--controls-gap) - 250px));
+      }
+    }
+
+    html, body {
+      height: 100%;
+      background: #3f8fd8;
+    }
+
+    body {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    /* ===== 空の背景 ===== */
+    .scene {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 40% at 80% 8%, rgba(255, 250, 220, 0.75), transparent 70%),
+        linear-gradient(180deg, #4aa8f0 0%, #8fd0ff 45%, #d6f0ff 80%, #fff3dc 100%);
+    }
+
+    /* 嵐のときに空を暗くする */
+    .scene::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, #1c2338 0%, #33405e 55%, #4a5672 100%);
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+
+    body.storm .scene::after { opacity: 0.88; }
+
+    .cloud {
+      position: absolute;
+      z-index: 1;
+      height: 30px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.85);
+      animation: drift 50s linear infinite;
+      transition: background 1.2s;
+    }
+
+    .cloud::before,
+    .cloud::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      background: inherit;
+    }
+
+    .cloud::before { width: 44%; height: 160%; left: 16%; top: -70%; }
+    .cloud::after { width: 32%; height: 130%; left: 52%; top: -46%; }
+
+    .cloud.c1 { top: 12%; width: 120px; animation-delay: -8s; }
+    .cloud.c2 { top: 34%; width: 86px; animation-duration: 64s; animation-delay: -40s; opacity: 0.8; }
+    .cloud.c3 { top: 58%; width: 70px; animation-duration: 56s; animation-delay: -22s; opacity: 0.65; }
+    .cloud.c4 { top: 80%; width: 100px; animation-duration: 70s; animation-delay: -5s; opacity: 0.7; }
+
+    body.storm .cloud { background: rgba(120, 130, 150, 0.9); }
+
+    @keyframes drift {
+      0% { transform: translateX(-30vw); }
+      100% { transform: translateX(120vw); }
+    }
+
+    /* 雨 */
+    .rain {
+      position: absolute;
+      inset: -20% 0 0 0;
+      z-index: 2;
+      background-image: repeating-linear-gradient(105deg, transparent 0 14px, rgba(200, 220, 255, 0.35) 14px 15px, transparent 15px 34px);
+      background-size: 100% 120px;
+      opacity: 0;
+      transition: opacity 1s;
+    }
+
+    body.storm .rain {
+      opacity: 1;
+      animation: rain 0.45s linear infinite;
+    }
+
+    @keyframes rain {
+      to { background-position: -30px 120px; }
+    }
+
+    /* 弾けたときのきらきら・石のかけら */
+    #fx {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 60;
+    }
+
+    /* ===== 画面全体（スマホ縦1列） ===== */
+    .app {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      height: 100%;
+      margin: 0 auto;
+      padding: max(8px, env(safe-area-inset-top)) var(--gutter) max(10px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== 上パネル（浮島とロゴ） ===== */
+    .stage {
+      position: relative;
+      flex: 0 0 auto;
+      height: var(--stage);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .stage-art {
+      position: absolute;
+      top: 4px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 56px);
+      overflow: visible;
+    }
+
+    .isle {
+      transform-box: fill-box;
+      animation: float 5s ease-in-out infinite alternate;
+    }
+
+    .isle.small { animation-duration: 4s; animation-delay: -2s; }
+
+    @keyframes float {
+      0% { transform: translateY(3px); }
+      100% { transform: translateY(-4px); }
+    }
+
+    .rainbow-arc {
+      opacity: 0;
+      transition: opacity 1s;
+    }
+
+    body.rainbow .rainbow-arc { opacity: 0.85; }
+
+    .storm-clouds {
+      opacity: 0;
+      transition: opacity 1s;
+    }
+
+    body.storm .storm-clouds { opacity: 1; }
+
+    @media (max-height: 720px) {
+      .stage-art { height: calc(100% - 46px); }
+      .logo-title { font-size: clamp(26px, 8.5vw, 34px); }
+    }
+
+    .stage .logo-sub {
+      background: linear-gradient(180deg, #2f9a5a, #146a3a);
+    }
+
+    #backBtn { left: 0; }
+    #helpBtn { right: 0; }
+
+    /* ===== 上のパネル（いま・スコア・NEXT・ストック） ===== */
+    .hud {
+      width: var(--frame);
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .counter,
+    .slot,
+    .weather {
+      border: 2px solid transparent;
+      border-radius: 14px;
+      background: var(--panel) padding-box, var(--gold-metal) border-box;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .counter {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .score-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff3c4;
+      text-shadow: 0 0 10px rgba(255, 200, 60, 0.8);
+      font-variant-numeric: tabular-nums;
+      display: inline-block;
+      transform-origin: left center;
+    }
+
+    .score-value.bump { animation: bump 0.4s ease; }
+
+    @keyframes bump {
+      40% { transform: scale(1.15); color: #fff; }
+    }
+
+    .sub-line {
+      font-size: 0.66rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sub-line strong {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slot {
+      width: 58px;
+      flex-shrink: 0;
+      padding: 4px 0 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: inherit;
+    }
+
+    .slot .label { font-size: 0.56rem; letter-spacing: 0.08em; }
+
+    .slot-piece {
+      position: relative;
+      width: 40px;
+      height: 40px;
+    }
+
+    .slot.now {
+      background: linear-gradient(180deg, #2d5a8a, #10284a) padding-box, var(--gold-metal) border-box;
+      box-shadow: 0 0 14px rgba(255, 215, 100, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .slot.now .slot-piece { animation: bob 1.4s ease-in-out infinite alternate; }
+
+    @keyframes bob {
+      0% { transform: translateY(-2px); }
+      100% { transform: translateY(2px); }
+    }
+
+    .slot.stock {
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .slot.stock .slot-piece {
+      border-radius: 10px;
+      border: 2px dashed rgba(255, 233, 168, 0.4);
+    }
+
+    .slot.stock.filled .slot-piece { border-color: transparent; }
+    .slot.stock:active { transform: scale(0.94); }
+
+    /* ===== 天気（ふつう・嵐・虹） ===== */
+    .weather {
+      position: relative;
+      width: var(--frame);
+      flex-shrink: 0;
+      overflow: hidden;
+      padding: 5px 12px 8px;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-align: center;
+      white-space: nowrap;
+      transition: background 0.6s;
+    }
+
+    .weather strong {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem;
+      color: #ffe066;
+    }
+
+    .weather .bar {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 3px;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+    }
+
+    .weather .bar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ffe066, #ffb347);
+      transition: width 0.4s ease;
+    }
+
+    .weather.storm {
+      background: linear-gradient(180deg, #5a2a4a, #2a1030) padding-box, var(--gold-metal) border-box;
+    }
+
+    .weather.storm .bar i { background: linear-gradient(90deg, #ff8a9b, #ff3b5c); }
+
+    .weather.rainbow {
+      background: linear-gradient(180deg, #1f6a4a, #0f3a2a) padding-box, var(--gold-metal) border-box;
+    }
+
+    .weather.rainbow .bar i { background: linear-gradient(90deg, #ff6b6b, #ffd34d, #6bff9a, #5fc8ff, #b47bff); }
+
+    /* ===== 盤面（浮島の畑） ===== */
+    .board {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 5px;
+      gap: 4px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #8a5a30, #6a4020);
+      box-shadow: inset 0 0 0 2px #3a2400, inset 0 6px 16px rgba(0, 0, 0, 0.45);
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      transition: filter 1s;
+    }
+
+    body.storm .board { filter: brightness(0.82) saturate(0.85); }
+
+    .board.shake { animation: boardShake 0.35s ease; }
+
+    @keyframes boardShake {
+      20% { transform: translate(-3px, 2px); }
+      40% { transform: translate(3px, -2px); }
+      60% { transform: translate(-2px, 1px); }
+      80% { transform: translate(2px, 0); }
+    }
+
+    .cell {
+      position: relative;
+      border-radius: 20%;
+      background: linear-gradient(180deg, #9be884 0%, #66c75c 75%);
+      box-shadow: inset 0 -4px 0 #3f9a3f, inset 0 2px 0 rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+    }
+
+    /* 草の模様 */
+    .cell::before {
+      content: '';
+      position: absolute;
+      inset: 18% 22% auto auto;
+      width: 14%;
+      height: 10%;
+      border-radius: 50% 50% 0 0;
+      border-top: 2px solid rgba(40, 120, 40, 0.35);
+    }
+
+    .cell.target {
+      box-shadow: inset 0 -4px 0 #3f9a3f, inset 0 0 0 3px #ffe066, 0 0 12px rgba(255, 224, 102, 0.8);
+    }
+
+    /* ===== ピース ===== */
+    .piece {
+      position: absolute;
+      inset: 4%;
+      pointer-events: none;
+      transition: transform 0.22s cubic-bezier(.5, 0, .7, .4), opacity 0.22s;
+    }
+
+    .piece svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.3));
+    }
+
+    /* 段の数字 */
+    .piece .lv {
+      position: absolute;
+      right: -4%;
+      bottom: -4%;
+      min-width: 32%;
+      height: 32%;
+      padding: 0 3px;
+      border-radius: 999px;
+      background: var(--lc, #444);
+      border: 1.5px solid rgba(255, 255, 255, 0.9);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: max(9px, calc(var(--frame) * 0.026));
+      line-height: 1;
+      display: grid;
+      place-items: center;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .slot .piece .lv { font-size: 9px; }
+
+    .piece.ghost { opacity: 0.6; }
+    .piece.ghost svg { filter: drop-shadow(0 0 4px #fff); }
+
+    /* 置けばくっつくピースはゆれる */
+    .piece.absorb { animation: wiggle 0.5s ease-in-out infinite; }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-7deg); }
+      50% { transform: rotate(7deg); }
+    }
+
+    .piece.land { animation: land 0.25s cubic-bezier(.3, 1.6, .6, 1); }
+
+    @keyframes land {
+      0% { transform: translateY(-30%) scale(0.6); opacity: 0; }
+      100% { transform: none; opacity: 1; }
+    }
+
+    .piece.made { animation: made 0.45s cubic-bezier(.2, 1.5, .5, 1); }
+
+    @keyframes made {
+      0% { transform: scale(0.3); filter: brightness(2.2); }
+      100% { transform: scale(1); filter: none; }
+    }
+
+    .piece.rock-drop { animation: rockDrop 0.4s cubic-bezier(.5, 0, 1, .5); }
+
+    @keyframes rockDrop {
+      0% { transform: translateY(-260%); opacity: 0.4; }
+      100% { transform: none; opacity: 1; }
+    }
+
+    .piece.crumble { animation: crumble 0.45s ease-in forwards; }
+
+    @keyframes crumble {
+      30% { transform: scale(1.1) rotate(-6deg); }
+      100% { transform: scale(0.2) rotate(12deg); opacity: 0; }
+    }
+
+    /* 選んだマスの上に出す「芽×3 → 花 +45」 */
+    .preview {
+      position: absolute;
+      z-index: 5;
+      transform: translate(-50%, -100%);
+      display: none;
+      align-items: center;
+      gap: 2px;
+      padding: 3px 10px 4px;
+      border-radius: 999px;
+      border: 2px solid #ffe066;
+      background: linear-gradient(180deg, #2d5a8a, #10284a);
+      color: #fff;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+    }
+
+    .preview.show {
+      display: flex;
+      animation: previewIn 0.2s cubic-bezier(.2,.9,.3,1.4);
+    }
+
+    .preview svg { width: 20px; height: 20px; }
+    .preview strong { font-family: 'Outfit', sans-serif; font-size: 0.95rem; color: #ffe066; margin-left: 4px; }
+    .preview .chain { color: #ff9ec8; margin-right: 4px; }
+
+    @keyframes previewIn {
+      from { transform: translate(-50%, -80%) scale(0.6); opacity: 0; }
+      to { transform: translate(-50%, -100%) scale(1); opacity: 1; }
+    }
+
+    .hint {
+      width: var(--frame);
+      min-height: 1.4em;
+      text-align: center;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* ===== 下のボタン ===== */
+    .controls {
+      margin-top: calc(var(--controls-gap) - 8px);
+      width: var(--frame);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      flex-shrink: 0;
+      padding-bottom: 5px;
+    }
+
+    /* ===== ルール ===== */
+    .ladder {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px 4px;
+      margin: 12px 0 4px;
+    }
+
+    .ladder div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+    }
+
+    .ladder svg { width: 36px; height: 36px; }
+
+    /* ===== 結果カード ===== */
+    .result-top {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: -10px 0 4px;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 1rem;
+      color: var(--gold-light);
+    }
+
+    .result-top svg { width: 40px; height: 40px; }
+
+    .result-line {
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      margin-bottom: 18px;
+    }
+
+    .result-line strong {
+      font-family: 'Outfit', sans-serif;
+      color: var(--gold-light);
+    }
+
+    .new-record {
+      display: none;
+      margin: -6px auto 12px;
+      width: fit-content;
+      padding: 2px 14px 3px;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.95rem;
+      color: #fff;
+      background: linear-gradient(180deg, #ff4d7a, #c0063a);
+      border: 2px solid #ffe066;
+      border-radius: 6px;
+      animation: blink 0.9s steps(2) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0.4; }
+    }
+
+    .message.record .new-record { display: block; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cloud, .isle, .slot.now .slot-piece, .piece.absorb, body.storm .rain { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ピースの絵（9段と石） -->
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <radialGradient id="g9glow">
+        <stop offset="0" stop-color="#fff6c2" stop-opacity="0.95"/>
+        <stop offset="0.6" stop-color="#ffd34d" stop-opacity="0.35"/>
+        <stop offset="1" stop-color="#ffd34d" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="g9gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff3a0"/>
+        <stop offset="0.5" stop-color="#ffcf33"/>
+        <stop offset="1" stop-color="#c88a00"/>
+      </linearGradient>
+
+      <!-- 1 芽 -->
+      <symbol id="p1" viewBox="0 0 40 40">
+        <ellipse cx="20" cy="32" rx="10" ry="3.5" fill="#7a5230"/>
+        <path d="M20 32 V19" stroke="#3f8f2f" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M20 24 C12 25 8 19 9 13 C15 12 20 17 20 24Z" fill="#8fdc5a" stroke="#2f6a1f" stroke-width="1.4"/>
+        <path d="M20 20 C28 20 32 14 31 8 C24 8 20 13 20 20Z" fill="#b2ee72" stroke="#2f6a1f" stroke-width="1.4"/>
+      </symbol>
+
+      <!-- 2 花 -->
+      <symbol id="p2" viewBox="0 0 40 40">
+        <path d="M20 35 V20" stroke="#3f8f2f" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M20 30 C14 30 11 26 12 23 C16 23 20 26 20 30Z" fill="#8fdc5a" stroke="#2f6a1f" stroke-width="1.2"/>
+        <g fill="#ff9ec8" stroke="#c0306a" stroke-width="1.2">
+          <circle cx="20" cy="9" r="5"/><circle cx="26.7" cy="13.8" r="5"/><circle cx="24.1" cy="21.7" r="5"/><circle cx="15.9" cy="21.7" r="5"/><circle cx="13.3" cy="13.8" r="5"/>
+        </g>
+        <circle cx="20" cy="16" r="4.3" fill="#ffd34d" stroke="#c08a00" stroke-width="1.2"/>
+      </symbol>
+
+      <!-- 3 木 -->
+      <symbol id="p3" viewBox="0 0 40 40">
+        <rect x="17.5" y="23" width="5" height="12" rx="1.5" fill="#8a5a2b" stroke="#5a3510" stroke-width="1.2"/>
+        <g fill="#1f6a1f"><circle cx="20" cy="13" r="10.5"/><circle cx="12" cy="20" r="7.5"/><circle cx="28" cy="20" r="7.5"/></g>
+        <g fill="#4fbf4a"><circle cx="20" cy="13" r="9"/><circle cx="12" cy="20" r="6"/><circle cx="28" cy="20" r="6"/></g>
+        <circle cx="16" cy="9" r="3" fill="#8fe07a"/>
+        <g fill="#ff5a5a"><circle cx="24" cy="16" r="1.8"/><circle cx="13" cy="21" r="1.6"/><circle cx="27" cy="22" r="1.6"/></g>
+      </symbol>
+
+      <!-- 4 小屋 -->
+      <symbol id="p4" viewBox="0 0 40 40">
+        <rect x="9" y="19" width="22" height="16" fill="#b5793d" stroke="#5a3510" stroke-width="1.4"/>
+        <path d="M9 24 H31 M9 29 H31" stroke="#7a4a1a" stroke-width="1"/>
+        <rect x="17" y="26" width="6" height="9" rx="1" fill="#5a3510"/>
+        <path d="M5 21 L20 7 L35 21 Z" fill="#e8c25a" stroke="#8a6a10" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M13 19 L20 11 L27 19 M17 20 L20 15 L23 20" stroke="#b8922a" stroke-width="0.9" fill="none"/>
+      </symbol>
+
+      <!-- 5 家 -->
+      <symbol id="p5" viewBox="0 0 40 40">
+        <rect x="25.5" y="8" width="4.5" height="8" fill="#a0523f" stroke="#5a2a1a" stroke-width="1"/>
+        <rect x="8" y="18" width="24" height="17" fill="#fff6e6" stroke="#6a4a3a" stroke-width="1.4"/>
+        <path d="M4.5 19.5 L20 6 L35.5 19.5 Z" fill="#e8483c" stroke="#8a1a10" stroke-width="1.4" stroke-linejoin="round"/>
+        <rect x="17" y="25" width="6" height="10" fill="#a0523f" stroke="#5a2a1a" stroke-width="1"/>
+        <g fill="#8fd3ff" stroke="#6a4a3a" stroke-width="1"><rect x="10.5" y="22" width="5" height="5"/><rect x="24.5" y="22" width="5" height="5"/></g>
+      </symbol>
+
+      <!-- 6 屋敷 -->
+      <symbol id="p6" viewBox="0 0 40 40">
+        <rect x="6" y="15" width="28" height="20" fill="#ffe9c4" stroke="#6a4a3a" stroke-width="1.4"/>
+        <path d="M3 16 L10 6 H30 L37 16 Z" fill="#3f6ad0" stroke="#1a2a6a" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M10 6 H30" stroke="#8fb0ff" stroke-width="1.2"/>
+        <g fill="#8fd3ff" stroke="#6a4a3a" stroke-width="1">
+          <rect x="9" y="18" width="5" height="4.5"/><rect x="17.5" y="18" width="5" height="4.5"/><rect x="26" y="18" width="5" height="4.5"/>
+          <rect x="9" y="26" width="5" height="4.5"/><rect x="26" y="26" width="5" height="4.5"/>
+        </g>
+        <path d="M17 35 V28 Q20 25 23 28 V35Z" fill="#7a4a2a" stroke="#4a2a10" stroke-width="1"/>
+      </symbol>
+
+      <!-- 7 時計塔 -->
+      <symbol id="p7" viewBox="0 0 40 40">
+        <rect x="6" y="25" width="28" height="10" fill="#d8c8b0" stroke="#5a4a3a" stroke-width="1.4"/>
+        <rect x="13" y="12" width="14" height="23" fill="#efe4d0" stroke="#5a4a3a" stroke-width="1.4"/>
+        <path d="M11 13 L20 1.5 L29 13 Z" fill="#2fa08a" stroke="#0f5a4a" stroke-width="1.4" stroke-linejoin="round"/>
+        <circle cx="20" cy="18.5" r="4.3" fill="#fff" stroke="#5a4a3a" stroke-width="1.2"/>
+        <path d="M20 18.5 V15.8 M20 18.5 H22.3" stroke="#333" stroke-width="1.1" stroke-linecap="round"/>
+        <path d="M17 35 V30 Q20 27 23 30 V35Z" fill="#7a4a2a"/>
+        <g fill="#8fd3ff" stroke="#5a4a3a" stroke-width="0.8"><rect x="8.5" y="28" width="3" height="3.5"/><rect x="28.5" y="28" width="3" height="3.5"/></g>
+      </symbol>
+
+      <!-- 8 お城 -->
+      <symbol id="p8" viewBox="0 0 40 40">
+        <rect x="8" y="19" width="24" height="16" fill="#cfd6e6" stroke="#4a5068" stroke-width="1.4"/>
+        <rect x="15" y="10" width="10" height="11" fill="#e2e8f4" stroke="#4a5068" stroke-width="1.4"/>
+        <rect x="3.5" y="13" width="8" height="22" fill="#e2e8f4" stroke="#4a5068" stroke-width="1.4"/>
+        <rect x="28.5" y="13" width="8" height="22" fill="#e2e8f4" stroke="#4a5068" stroke-width="1.4"/>
+        <g fill="#d03f5a" stroke="#7a1028" stroke-width="1.3" stroke-linejoin="round">
+          <path d="M2.5 14 L7.5 4.5 L12.5 14 Z"/><path d="M27.5 14 L32.5 4.5 L37.5 14 Z"/><path d="M14 11 L20 2.5 L26 11 Z"/>
+        </g>
+        <path d="M16 35 V28 Q20 24 24 28 V35Z" fill="#5a3a2a"/>
+        <g fill="#5a6a8a"><rect x="6" y="18" width="3" height="4" rx="1.5"/><rect x="31" y="18" width="3" height="4" rx="1.5"/><rect x="18.5" y="14" width="3" height="4" rx="1.5"/></g>
+      </symbol>
+
+      <!-- 9 天空城 -->
+      <symbol id="p9" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r="20" fill="url(#g9glow)"/>
+        <rect x="8" y="19" width="24" height="16" fill="url(#g9gold)" stroke="#7a5200" stroke-width="1.4"/>
+        <rect x="15" y="10" width="10" height="11" fill="url(#g9gold)" stroke="#7a5200" stroke-width="1.4"/>
+        <rect x="3.5" y="13" width="8" height="22" fill="url(#g9gold)" stroke="#7a5200" stroke-width="1.4"/>
+        <rect x="28.5" y="13" width="8" height="22" fill="url(#g9gold)" stroke="#7a5200" stroke-width="1.4"/>
+        <g fill="#fff" stroke="#c08a00" stroke-width="1.2" stroke-linejoin="round">
+          <path d="M2.5 14 L7.5 5 L12.5 14 Z"/><path d="M27.5 14 L32.5 5 L37.5 14 Z"/>
+        </g>
+        <path d="M14 11 L15 4 L18 8 L20 2 L22 8 L25 4 L26 11 Z" fill="#ffe066" stroke="#c08a00" stroke-width="1.2" stroke-linejoin="round"/>
+        <circle cx="20" cy="8.5" r="1.4" fill="#ff4f93"/>
+        <path d="M16 35 V28 Q20 24 24 28 V35Z" fill="#8a3a10"/>
+        <g fill="#5fc8ff"><circle cx="7.5" cy="20" r="1.6"/><circle cx="32.5" cy="20" r="1.6"/><circle cx="20" cy="15.5" r="1.6"/></g>
+      </symbol>
+
+      <!-- 石 -->
+      <symbol id="p0" viewBox="0 0 40 40">
+        <ellipse cx="20" cy="34" rx="14" ry="3" fill="rgba(0,0,0,0.25)"/>
+        <path d="M6 33 L8.5 21 L16 13 L26 12 L33.5 19 L35 33 Z" fill="#8a8f9a" stroke="#3a3f4a" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M8.5 21 L18 23 L26 12 M18 23 L22 33 M18 23 L10 33" stroke="#5a5f6a" stroke-width="1.2" fill="none"/>
+        <path d="M14 17 L20 14.5" stroke="#c8ccd4" stroke-width="2" stroke-linecap="round"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- 空の背景 -->
+  <div class="scene" aria-hidden="true">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+    <div class="cloud c4"></div>
+    <div class="rain"></div>
+  </div>
+
+  <main class="app">
+    <!-- 上パネル：空に浮かぶ島 -->
+    <header class="stage" id="stage">
+      <button class="icon-btn" id="backBtn" aria-label="戻る">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="icon-btn" id="helpBtn" aria-label="ルール">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 1c0 1.7-2.5 2.3-2.5 3.8"/><circle cx="12" cy="17.3" r="0.6" fill="currentColor"/></svg>
+      </button>
+
+      <svg class="stage-art" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+        <defs>
+          <linearGradient id="isleRock" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#a8784a"/>
+            <stop offset="1" stop-color="#5a3a20"/>
+          </linearGradient>
+          <linearGradient id="isleGrass" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9be884"/>
+            <stop offset="1" stop-color="#4fa84a"/>
+          </linearGradient>
+          <linearGradient id="fall" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#d6f4ff"/>
+            <stop offset="1" stop-color="#d6f4ff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- 虹（ごほうびのとき） -->
+        <g class="rainbow-arc" fill="none" stroke-width="7">
+          <path d="M60 170 A140 130 0 0 1 340 170" stroke="#ff6b6b"/>
+          <path d="M67 170 A133 123 0 0 1 333 170" stroke="#ffb347"/>
+          <path d="M74 170 A126 116 0 0 1 326 170" stroke="#ffe066"/>
+          <path d="M81 170 A119 109 0 0 1 319 170" stroke="#6bdc7a"/>
+          <path d="M88 170 A112 102 0 0 1 312 170" stroke="#5fc8ff"/>
+          <path d="M95 170 A105 95 0 0 1 305 170" stroke="#b47bff"/>
+        </g>
+
+        <!-- 小さい浮島 -->
+        <g class="isle small">
+          <path d="M40 92 Q62 84 84 92 L72 118 Q62 128 52 118 Z" fill="url(#isleRock)"/>
+          <ellipse cx="62" cy="92" rx="23" ry="6" fill="url(#isleGrass)"/>
+          <use href="#p3" x="50" y="66" width="24" height="24"/>
+        </g>
+        <g class="isle small" style="animation-delay: -0.8s">
+          <path d="M318 82 Q340 75 362 82 L350 106 Q340 115 330 106 Z" fill="url(#isleRock)"/>
+          <ellipse cx="340" cy="82" rx="23" ry="6" fill="url(#isleGrass)"/>
+          <use href="#p2" x="330" y="60" width="20" height="20"/>
+        </g>
+
+        <!-- 大きい浮島と町 -->
+        <g class="isle">
+          <rect x="252" y="128" width="10" height="50" fill="url(#fall)"/>
+          <path d="M110 128 Q200 112 290 128 L262 168 Q232 196 200 198 Q168 196 138 168 Z" fill="url(#isleRock)"/>
+          <path d="M150 160 L170 150 M230 158 L246 148 M190 178 L206 170" stroke="#4a2a10" stroke-width="2" opacity="0.5"/>
+          <ellipse cx="200" cy="128" rx="92" ry="14" fill="url(#isleGrass)"/>
+          <use href="#p3" x="118" y="96" width="34" height="34"/>
+          <use href="#p5" x="146" y="94" width="36" height="36"/>
+          <use href="#p8" x="176" y="66" width="52" height="60"/>
+          <use href="#p7" x="224" y="88" width="36" height="40"/>
+          <use href="#p2" x="258" y="106" width="22" height="22"/>
+          <use href="#p1" x="140" y="118" width="16" height="16"/>
+        </g>
+
+        <!-- 嵐の雲（いじわるのとき） -->
+        <g class="storm-clouds" fill="#4a5068">
+          <ellipse cx="90" cy="30" rx="60" ry="18"/><ellipse cx="130" cy="20" rx="40" ry="18"/>
+          <ellipse cx="300" cy="26" rx="64" ry="18"/><ellipse cx="260" cy="16" rx="36" ry="16"/>
+          <path d="M120 40 L110 62 L120 60 L112 84" stroke="#ffe066" stroke-width="3" fill="none" stroke-linejoin="round"/>
+        </g>
+      </svg>
+
+      <div class="logo">
+        <div class="logo-title">Sky Village</div>
+        <div class="logo-sub">空に浮かぶ島のまちづくり</div>
+      </div>
+    </header>
+
+    <!-- いま置くピース・スコア・NEXT・ストック -->
+    <section class="hud">
+      <div class="slot now">
+        <span class="label">いま</span>
+        <div class="slot-piece" id="curPiece"></div>
+      </div>
+      <div class="counter">
+        <span class="label">SCORE</span>
+        <strong class="score-value" id="score">0</strong>
+        <span class="sub-line">ベスト <strong id="best">0</strong></span>
+      </div>
+      <div class="slot">
+        <span class="label">NEXT</span>
+        <div class="slot-piece" id="nextPiece"></div>
+      </div>
+      <button class="slot stock" id="stockBtn" aria-label="ストック">
+        <span class="label">ストック</span>
+        <div class="slot-piece" id="stockPiece"></div>
+      </button>
+    </section>
+
+    <!-- 天気 -->
+    <div class="weather" id="weather">
+      <span id="weatherText"></span>
+      <div class="bar"><i id="weatherBar"></i></div>
+    </div>
+
+    <!-- 盤面 -->
+    <div class="frame" id="frame">
+      <div class="lights" id="lights"></div>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <span class="corner-pearl"></span>
+      <div class="board" id="board"></div>
+      <div class="preview" id="preview"></div>
+    </div>
+
+    <p class="hint" id="hint"></p>
+
+    <!-- 操作ボタン -->
+    <div class="controls">
+      <button class="slot-btn red" id="retireBtn">リタイア</button>
+      <button class="slot-btn blue" id="resetBtn">リセット</button>
+    </div>
+  </main>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
+
+  <!-- ルール説明モーダル -->
+  <div class="modal-overlay" id="rulesModal">
+    <div class="modal">
+      <h2>あそびかた</h2>
+      <div class="modal-body">
+      <ul class="rules">
+        <li><span class="num">1</span><span>左上の「いま」のピースを、置きたいマスにタップ。もう一度タップで置けるよ</span></li>
+        <li><span class="num">2</span><span>同じピースが<b>3つ以上くっつく</b>と、置いたマスで1つ大きく育つよ。育ったピースがまたそろうと連鎖！</span></li>
+        <li><span class="num">3</span><span>「ストック」をタップすると、いまのピースを1つ預けておけるよ</span></li>
+        <li><span class="num">4</span><span>点数が上がると<b>嵐</b>がきて、そろいにくいピースや石が落ちてくる。決まった点をかせぐと<b>虹</b>がかかって石がくずれるよ</span></li>
+        <li><span class="num">5</span><span>マスがぜんぶうまったらおしまい。大きな建物ほど点が高いよ</span></li>
+      </ul>
+      <div class="ladder" id="ladder"></div>
+      </div>
+      <button class="primary-btn" id="closeRulesBtn">わかった！</button>
+    </div>
+  </div>
+
+  <div class="message" id="message">
+    <h2>おしまい</h2>
+    <p class="message-sub">島がいっぱいになったよ</p>
+    <p class="new-record">自己ベスト更新！</p>
+    <p class="final-score" id="finalScore">0</p>
+    <p class="result-top" id="resultTop"></p>
+    <p class="result-line"><strong id="resultTurns">0</strong>手 ・ 自己ベスト <strong id="bestScore">0</strong></p>
+    <button class="primary-btn" id="messageBtn">もういちど</button>
+  </div>
+
+  <script src="arcade.js"></script>
+  <script>
+    // ゲーム設定
+    const N = 6;
+    const SAVE_KEY = 'skyVillageSave';
+    const BEST_KEY = 'skyVillageBest';
+
+    // 段（1から）。名前・色・できたときの点
+    const LEVELS = [
+      null,
+      { name: '芽', c: '#5cb83a', pts: 5 },
+      { name: '花', c: '#e0508a', pts: 20 },
+      { name: '木', c: '#2f9a3a', pts: 100 },
+      { name: '小屋', c: '#c08a2a', pts: 500 },
+      { name: '家', c: '#d8402f', pts: 1500 },
+      { name: '屋敷', c: '#3f6ad0', pts: 5000 },
+      { name: '時計塔', c: '#1f8a72', pts: 20000 },
+      { name: 'お城', c: '#c0304a', pts: 100000 },
+      { name: '天空城', c: '#d09a00', pts: 500000 }
+    ];
+    const MAX = LEVELS.length - 1;
+
+    // やってくるピースの出やすさ
+    const SPAWN = [[1, 0.76], [2, 0.19], [3, 0.04], [4, 0.01]];
+
+    // 石（合体しない。虹がかかるとくずれる）
+    const ROCK = -1;
+
+    // 嵐（いじわる）が来る点数。回を重ねるほど間が広がる
+    const STORM_AT = [3000, 10000, 25000, 50000, 100000, 200000];
+    const stormAt = (k) => STORM_AT[k] || STORM_AT[STORM_AT.length - 1] * 2 ** (k - STORM_AT.length + 1);
+    // 嵐を抜けるのにかせぐ点数
+    const stormSpan = (k) => Math.round(stormAt(k) * 0.35 / 100) * 100;
+    // 回を重ねるほど、そろわないピースが来やすく、石の間隔が短くなる
+    const stormChance = (k) => Math.min(0.75, 0.4 + 0.08 * k);
+    const rockEvery = (k) => Math.max(3, 5 - k);
+    const RAINBOW_TURNS = 8;
+
+    let grid, cur, next, stock, score, turns, over, phase, topMade;
+    let best = 0;
+    let preview = null;
+    let busy = false;
+
+    try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) {}
+
+    const inside = (r, c) => r >= 0 && r < N && c >= 0 && c < N;
+    const neighbors = (r, c) => [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].filter(([y, x]) => inside(y, x));
+
+    // (r, c) に lv を置いたとしたときに、つながる同じ段のマス（置くマス自身は含めない）
+    function groupFor(g, r, c, lv) {
+      const seen = new Set([r * N + c]);
+      const stack = [[r, c]];
+      const out = [];
+      while (stack.length) {
+        const [y, x] = stack.pop();
+        neighbors(y, x).forEach(([a, b]) => {
+          if (seen.has(a * N + b) || g[a][b] !== lv) return;
+          seen.add(a * N + b);
+          out.push([a, b]);
+          stack.push([a, b]);
+        });
+      }
+      return out;
+    }
+
+    // 置いたときに起きることを順に求める（連鎖も含む）
+    function simulate(r, c, lv) {
+      const g = grid.map(row => row.slice());
+      const steps = [];
+      let gained = LEVELS[lv].pts;
+      while (lv < MAX) {
+        const group = groupFor(g, r, c, lv);
+        if (group.length < 2) break;
+        group.forEach(([y, x]) => { g[y][x] = 0; });
+        // 4つ以上まとめると、できたピースの点が多めにもらえる
+        const pts = LEVELS[lv + 1].pts * (group.length - 1);
+        gained += pts;
+        steps.push({ from: lv, to: lv + 1, cells: group, size: group.length + 1, pts });
+        lv++;
+      }
+      g[r][c] = lv;
+      return { g, steps, final: lv, gained };
+    }
+
+    // そのピースを今置いたら、いちばん多く何段まで連鎖できるか（0 ならどこに置いてもそろわない）
+    function bestChain(lv) {
+      let most = 0;
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (!grid[r][c]) most = Math.max(most, simulate(r, c, lv).steps.length);
+        }
+      }
+      return most;
+    }
+
+    function randomPiece() {
+      let r = Math.random();
+      for (const [lv, p] of SPAWN) {
+        if ((r -= p) < 0) return lv;
+      }
+      return 1;
+    }
+
+    function spawn() {
+      if (phase.mode === 'storm' && Math.random() < stormChance(phase.k)) {
+        // 嵐：どこに置いてもそろわないピースを選ぶ
+        const bad = [1, 2, 3].filter(lv => bestChain(lv) === 0);
+        if (bad.length) return bad[Math.floor(Math.random() * bad.length)];
+      }
+      if (phase.mode === 'rainbow' && Math.random() < 0.75) {
+        // 虹：いちばん連鎖できるピースを選ぶ
+        const scored = [1, 2, 3].map(lv => [lv, bestChain(lv)]).filter(([, n]) => n > 0);
+        if (scored.length) return scored.sort((a, b) => b[1] - a[1])[0][0];
+      }
+      return randomPiece();
+    }
+
+    const calm = (k, from) => ({ mode: 'calm', k, goal: stormAt(k), from, turn: 0 });
+
+    function initGame() {
+      grid = Array.from({ length: N }, () => Array(N).fill(0));
+      // はじめから少しだけ置いておく（そろっていない状態で）
+      let placed = 0;
+      while (placed < 8) {
+        const r = Math.floor(Math.random() * N);
+        const c = Math.floor(Math.random() * N);
+        const lv = 1 + Math.floor(Math.random() * 3);
+        if (grid[r][c] || groupFor(grid, r, c, lv).length >= 2) continue;
+        grid[r][c] = lv;
+        placed++;
+      }
+      phase = calm(0, 0);
+      cur = randomPiece();
+      next = randomPiece();
+      stock = 0;
+      score = 0;
+      turns = 0;
+      topMade = 3;
+      over = false;
+      preview = null;
+      clearSave();
+      render();
+      setHint('「いま」のピースを置くマスをタップ');
+    }
+
+    // ===== セーブ =====
+    function saveGame() {
+      if (over) return;
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({ grid, cur, next, stock, score, turns, phase, topMade }));
+      } catch (e) {}
+    }
+
+    function clearSave() {
+      try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    }
+
+    function loadGame() {
+      try {
+        const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+        if (!d || !d.grid) return false;
+        ({ grid, cur, next, stock, score, turns, phase, topMade } = d);
+        over = false;
+        preview = null;
+        render();
+        setHint('つづきから遊べるよ');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // ===== 表示 =====
+    const boardEl = document.getElementById('board');
+    const frameEl = document.getElementById('frame');
+    const previewEl = document.getElementById('preview');
+    const scoreEl = document.getElementById('score');
+    const hintEl = document.getElementById('hint');
+    const cells = [];
+
+    Arcade.buildLights(document.getElementById('lights'), 10);
+
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const el = document.createElement('div');
+        el.className = 'cell';
+        el.addEventListener('click', () => tapCell(r, c));
+        boardEl.appendChild(el);
+        cells.push(el);
+      }
+    }
+
+    const icon = (lv) => `<svg viewBox="0 0 40 40"><use href="#p${lv === ROCK ? 0 : lv}"/></svg>`;
+    const nameOf = (lv) => (lv === ROCK ? '石' : LEVELS[lv].name);
+
+    function pieceHtml(lv, cls = '') {
+      if (!lv) return '';
+      const badge = lv === ROCK ? '' : `<span class="lv" style="--lc:${LEVELS[lv].c}">${lv}</span>`;
+      return `<div class="piece ${cls}">${icon(lv)}${badge}</div>`;
+    }
+
+    document.getElementById('ladder').innerHTML = LEVELS.slice(1)
+      .map((L, i) => `<div>${icon(i + 1)}${i + 1} ${L.name}</div>`).join('') + `<div>${icon(ROCK)}石</div>`;
+
+    const cellEl = (r, c) => cells[r * N + c];
+    const pieceAt = (r, c) => cellEl(r, c).querySelector('.piece');
+
+    function renderBoard() {
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const el = cellEl(r, c);
+          el.classList.remove('target');
+          el.innerHTML = pieceHtml(grid[r][c]);
+        }
+      }
+      previewEl.classList.remove('show');
+      if (!preview) return;
+
+      // 置いたらどうなるかを見せる
+      const { r, c, sim } = preview;
+      cellEl(r, c).classList.add('target');
+      cellEl(r, c).innerHTML = pieceHtml(sim.final, 'ghost');
+      sim.steps.forEach(s => s.cells.forEach(([y, x]) => pieceAt(y, x).classList.add('absorb')));
+
+      const chain = sim.steps.length >= 2 ? `<span class="chain">${sim.steps.length}連鎖</span>` : '';
+      const body = sim.steps.length
+        ? `${icon(sim.steps[0].from)}×${sim.steps[0].size} → ${icon(sim.final)}`
+        : `${icon(cur)}を置く`;
+      previewEl.innerHTML = `${chain}${body}<strong>+${sim.gained.toLocaleString()}</strong>`;
+      const cell = cellEl(r, c);
+      const half = previewEl.offsetWidth / 2 || 70;
+      const x = Math.min(Math.max(cell.offsetLeft + boardEl.offsetLeft + cell.offsetWidth / 2, half + 4), frameEl.clientWidth - half - 4);
+      previewEl.style.left = x + 'px';
+      previewEl.style.top = Math.max(cell.offsetTop + boardEl.offsetTop - 2, 30) + 'px';
+      previewEl.classList.remove('show');
+      void previewEl.offsetWidth;
+      previewEl.classList.add('show');
+      // 幅が決まってから位置を合わせ直す
+      const w = previewEl.offsetWidth / 2;
+      previewEl.style.left = Math.min(Math.max(cell.offsetLeft + boardEl.offsetLeft + cell.offsetWidth / 2, w + 4), frameEl.clientWidth - w - 4) + 'px';
+    }
+
+    function setSlot(id, lv) {
+      document.getElementById(id).innerHTML = pieceHtml(lv);
+    }
+
+    function renderTray() {
+      setSlot('curPiece', cur);
+      setSlot('nextPiece', next);
+      setSlot('stockPiece', stock);
+      document.getElementById('stockBtn').classList.toggle('filled', !!stock);
+    }
+
+    function renderWeather() {
+      const el = document.getElementById('weather');
+      const bar = document.getElementById('weatherBar');
+      const text = document.getElementById('weatherText');
+      el.className = 'weather ' + phase.mode;
+      document.body.classList.toggle('storm', phase.mode === 'storm');
+      document.body.classList.toggle('rainbow', phase.mode === 'rainbow');
+      const left = Math.max(0, phase.goal - score).toLocaleString();
+      if (phase.mode === 'calm') {
+        text.innerHTML = `☀️ はれ　つぎの嵐まで あと <strong>${left}</strong>点`;
+        bar.style.width = Math.min(100, (score - phase.from) / (phase.goal - phase.from) * 100) + '%';
+      } else if (phase.mode === 'storm') {
+        const toRock = rockEvery(phase.k) - (phase.turn % rockEvery(phase.k));
+        text.innerHTML = `⛈️ 嵐！　あと <strong>${left}</strong>点で晴れる ・ 落石まで${toRock}手`;
+        bar.style.width = Math.min(100, (score - phase.from) / (phase.goal - phase.from) * 100) + '%';
+      } else {
+        text.innerHTML = `🌈 虹　あと <strong>${phase.left}</strong>手 ・ そろいやすいよ`;
+        bar.style.width = (phase.left / RAINBOW_TURNS * 100) + '%';
+      }
+    }
+
+    function render() {
+      renderBoard();
+      renderTray();
+      renderWeather();
+      scoreEl.textContent = score.toLocaleString();
+      document.getElementById('best').textContent = best.toLocaleString();
+      const empty = grid.flat().filter(v => !v).length;
+      frameEl.classList.toggle('danger', empty <= 4 && !over);
+    }
+
+    function setScore(v) {
+      scoreEl.textContent = v.toLocaleString();
+      scoreEl.classList.remove('bump');
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add('bump');
+    }
+
+    function setHint(text) {
+      hintEl.textContent = text;
+    }
+
+    const wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+    function centerOf(r, c) {
+      const rect = cellEl(r, c).getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+
+    function scorePop(r, c, text) {
+      const { x, y } = centerOf(r, c);
+      const el = document.createElement('div');
+      el.className = 'score-pop';
+      el.textContent = text;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }
+
+    function lightning() {
+      const el = document.createElement('div');
+      el.className = 'flash';
+      el.style.background = 'rgba(230, 240, 255, 0.75)';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 600);
+    }
+
+    // ===== 操作 =====
+    function tapCell(r, c) {
+      if (busy || over) return;
+      if (grid[r][c]) {
+        preview = null;
+        renderBoard();
+        setHint(grid[r][c] === ROCK ? '石は動かせないよ。虹がかかるとくずれるよ' : '空いているマスをタップしてね');
+        playSound('blocked');
+        return;
+      }
+      if (preview && preview.r === r && preview.c === c) {
+        place(r, c);
+        return;
+      }
+      preview = { r, c, sim: simulate(r, c, cur) };
+      renderBoard();
+      setHint('もう一度タップで置くよ');
+      playSound('select');
+    }
+
+    // 1手ぶんを進める。盤面を先に確定・セーブしてから演出する
+    async function place(r, c) {
+      const sim = preview.sim;
+      const placedLv = cur;
+      const before = grid;
+      preview = null;
+      busy = true;
+
+      grid = sim.g;
+      score += sim.gained;
+      turns++;
+      const ev = advancePhase();
+      cur = next;
+      next = spawn();
+      const full = grid.every(row => row.every(Boolean));
+      if (full) over = true;
+      else saveGame();
+
+      // 置く前の盤面に、置いたピースだけ足して見せる
+      const shown = grid;
+      grid = before;
+      renderBoard();
+      grid = shown;
+      cellEl(r, c).innerHTML = pieceHtml(placedLv, 'land');
+      renderTray();
+      playSound('place');
+      await wait(200);
+
+      // 合体：くっつくピースが置いたマスへ吸い寄せられる
+      let running = score - sim.gained + LEVELS[placedLv].pts;
+      setScore(running);
+      for (let i = 0; i < sim.steps.length; i++) {
+        const s = sim.steps[i];
+        const to = centerOf(r, c);
+        s.cells.forEach(([y, x]) => {
+          const p = pieceAt(y, x);
+          if (!p) return;
+          const from = centerOf(y, x);
+          p.style.transform = `translate(${to.x - from.x}px, ${to.y - from.y}px) scale(0.5)`;
+          p.style.opacity = '0';
+        });
+        await wait(230);
+        s.cells.forEach(([y, x]) => { cellEl(y, x).innerHTML = ''; });
+        cellEl(r, c).innerHTML = pieceHtml(s.to, 'made');
+        sparkle(to.x, to.y, LEVELS[s.to].c, 14 + s.to * 4);
+        playSound('merge', i);
+        running += s.pts;
+        setScore(running);
+        scorePop(r, c, '+' + s.pts.toLocaleString());
+        await wait(260);
+      }
+
+      if (sim.steps.length >= 2) {
+        Arcade.banner(frameEl, `${sim.steps.length}連鎖！`);
+      }
+      if (sim.final > topMade) {
+        topMade = sim.final;
+        if (sim.final >= 4) {
+          const big = sim.final >= 7;
+          Arcade.banner(frameEl, `${LEVELS[sim.final].name}ができた！`, { sub: 'はじめて', fever: big });
+          if (big) {
+            Arcade.shower(40);
+            playSound('fanfare');
+          }
+        }
+        saveGame();
+      }
+
+      // 天気の変化
+      if (ev.storm) {
+        await wait(sim.steps.length >= 2 ? 700 : 200);
+        lightning();
+        playSound('thunder');
+        Arcade.banner(frameEl, '嵐がきた！', { sub: `${stormSpan(phase.k).toLocaleString()}点かせいで晴らそう` });
+      }
+      if (ev.crumbled.length) {
+        await wait(400);
+        ev.crumbled.forEach(([y, x]) => {
+          const p = pieceAt(y, x);
+          if (p) p.classList.add('crumble');
+          const { x: px, y: py } = centerOf(y, x);
+          sparkle(px, py, '#8a8f9a', 12, true);
+        });
+        playSound('crumble');
+        Arcade.banner(frameEl, '虹がかかった！', { sub: `石が${ev.crumbled.length}こくずれた`, fever: true });
+        await wait(450);
+      } else if (ev.rainbow) {
+        await wait(300);
+        Arcade.banner(frameEl, '虹がかかった！', { sub: 'そろうピースが来やすいよ', fever: true });
+      }
+      if (ev.rainbow) playSound('fanfare');
+      if (ev.calm) Arcade.banner(frameEl, '晴れてきた', { sub: `つぎの嵐は ${stormAt(phase.k).toLocaleString()}点` });
+
+      render();
+      if (ev.rock) {
+        const p = pieceAt(ev.rock[0], ev.rock[1]);
+        if (p) p.classList.add('rock-drop');
+        await wait(380);
+        lightning();
+        playSound('rock');
+        boardEl.classList.remove('shake');
+        void boardEl.offsetWidth;
+        boardEl.classList.add('shake');
+      }
+
+      setHint(ev.rock ? '石が落ちてきた！' : '「いま」のピースを置くマスをタップ');
+      busy = false;
+      if (over) {
+        await wait(500);
+        showGameOver();
+      }
+    }
+
+    // 1手ごとに天気を進める
+    function advancePhase() {
+      const ev = { storm: false, rainbow: false, calm: false, rock: null, crumbled: [] };
+      if (phase.mode === 'calm' && score >= phase.goal) {
+        phase = { mode: 'storm', k: phase.k, goal: score + stormSpan(phase.k), from: score, turn: 0 };
+        ev.storm = true;
+      } else if (phase.mode === 'storm') {
+        if (score >= phase.goal) {
+          for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+              if (grid[r][c] === ROCK) {
+                ev.crumbled.push([r, c]);
+                grid[r][c] = 0;
+              }
+            }
+          }
+          phase = { mode: 'rainbow', k: phase.k + 1, left: RAINBOW_TURNS };
+          ev.rainbow = true;
+        } else {
+          phase.turn++;
+          if (phase.turn % rockEvery(phase.k) === 0) ev.rock = dropRock();
+        }
+      } else if (phase.mode === 'rainbow') {
+        phase.left--;
+        if (phase.left <= 0) {
+          phase = calm(phase.k, score);
+          ev.calm = true;
+        }
+      }
+      return ev;
+    }
+
+    // そろいそうなマス（置けば合体が起きるマス）を優先して石を落とす
+    function dropRock() {
+      const empty = [];
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          if (grid[r][c]) continue;
+          let hot = 0;
+          for (let lv = 1; lv < MAX; lv++) if (groupFor(grid, r, c, lv).length >= 2) hot += lv;
+          empty.push({ r, c, hot: hot + Math.random() });
+        }
+      }
+      if (empty.length <= 1) return null;
+      empty.sort((a, b) => b.hot - a.hot);
+      const pick = empty[Math.floor(Math.random() * Math.min(3, empty.length))];
+      grid[pick.r][pick.c] = ROCK;
+      return [pick.r, pick.c];
+    }
+
+    // ストック：空なら今のピースを預ける（次のピースが今になる）。入っていれば入れかえ
+    document.getElementById('stockBtn').addEventListener('click', () => {
+      if (busy || over) return;
+      if (!stock) {
+        stock = cur;
+        cur = next;
+        next = spawn();
+      } else {
+        [stock, cur] = [cur, stock];
+      }
+      if (preview) preview = { ...preview, sim: simulate(preview.r, preview.c, cur) };
+      render();
+      setHint('ストックと入れかえたよ');
+      playSound('swap');
+      saveGame();
+    });
+
+    // ===== きらきら・かけら =====
+    const fx = document.getElementById('fx');
+    const fctx = fx.getContext('2d');
+    const bits = [];
+    let fxRunning = false;
+    let lastT = 0;
+
+    function sizeFx() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      fx.width = innerWidth * dpr;
+      fx.height = innerHeight * dpr;
+      fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // rock=true なら石のかけら（四角く、重く落ちる）
+    function sparkle(x, y, color, count, rock = false) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = (rock ? 1 : 1.6) + Math.random() * 2.4;
+        bits.push({
+          x, y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp - (rock ? 1 : 1.5),
+          rot: Math.random() * Math.PI,
+          life: 0,
+          max: 30 + Math.random() * 20,
+          color: !rock && Math.random() < 0.35 ? '#fff6c2' : color,
+          size: rock ? 3 + Math.random() * 3 : 2 + Math.random() * 2.5,
+          rock
+        });
+      }
+      if (!fxRunning) {
+        fxRunning = true;
+        lastT = performance.now();
+        requestAnimationFrame(tickFx);
+      }
+    }
+
+    function drawStar(x, y, r, rot) {
+      fctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const rr = i % 2 ? r * 0.4 : r;
+        const a = rot + (i * Math.PI) / 4;
+        fctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+      }
+      fctx.closePath();
+      fctx.fill();
+    }
+
+    function tickFx(t) {
+      const k = Math.min(3, (t - lastT) / 16.7);
+      lastT = t;
+      fctx.clearRect(0, 0, innerWidth, innerHeight);
+      for (let i = bits.length - 1; i >= 0; i--) {
+        const b = bits[i];
+        b.vx *= Math.pow(0.96, k);
+        b.vy = b.vy * Math.pow(0.96, k) + (b.rock ? 0.25 : 0.08) * k;
+        b.x += b.vx * k;
+        b.y += b.vy * k;
+        b.rot += 0.12 * k;
+        b.life += k;
+        if (b.life >= b.max) {
+          bits.splice(i, 1);
+          continue;
+        }
+        fctx.globalAlpha = Math.min(1, (1 - b.life / b.max) * 1.5);
+        fctx.fillStyle = b.color;
+        if (b.rock) {
+          fctx.save();
+          fctx.translate(b.x, b.y);
+          fctx.rotate(b.rot);
+          fctx.fillRect(-b.size / 2, -b.size / 2, b.size, b.size);
+          fctx.restore();
+        } else {
+          drawStar(b.x, b.y, b.size * 1.6, b.rot);
+        }
+      }
+      fctx.globalAlpha = 1;
+      if (bits.length) {
+        requestAnimationFrame(tickFx);
+      } else {
+        fxRunning = false;
+        fctx.clearRect(0, 0, innerWidth, innerHeight);
+      }
+    }
+
+    // ===== 効果音 =====
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // iPhone では最初のタップまで音が鳴らないため、そこで再開する
+    document.addEventListener('pointerdown', () => audioCtx.resume(), { once: true });
+
+    const noiseBuf = (() => {
+      const len = audioCtx.sampleRate;
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      return buf;
+    })();
+
+    function noise(t, dur, { freq = 600, gain = 0.3 } = {}) {
+      const src = audioCtx.createBufferSource();
+      src.buffer = noiseBuf;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(freq, t);
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(audioCtx.destination);
+      src.start(t);
+      src.stop(t + dur);
+    }
+
+    function tone(t, freq, dur, { type = 'sine', gain = 0.12, to = null } = {}) {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      if (to) osc.frequency.exponentialRampToValueAtTime(to, t + dur);
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(g);
+      g.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + dur);
+    }
+
+    function playSound(type, n = 0) {
+      if (audioCtx.state !== 'running') return;
+      const t = audioCtx.currentTime;
+      if (type === 'select') {
+        tone(t, 880, 0.06, { type: 'triangle', gain: 0.07 });
+      } else if (type === 'place') {
+        tone(t, 420, 0.12, { gain: 0.14, to: 620 });
+      } else if (type === 'merge') {
+        // 連鎖するほど高い和音
+        const base = [523, 587, 659, 784, 880, 1047, 1175, 1319][Math.min(n, 7)];
+        [1, 1.25, 1.5].forEach((m, i) => tone(t + i * 0.04, base * m, 0.3, { type: 'triangle', gain: 0.09 }));
+      } else if (type === 'swap') {
+        tone(t, 500, 0.08, { type: 'triangle', gain: 0.08, to: 700 });
+      } else if (type === 'thunder') {
+        noise(t, 1.2, { freq: 260, gain: 0.5 });
+      } else if (type === 'rock') {
+        noise(t, 0.35, { freq: 180, gain: 0.5 });
+        tone(t, 90, 0.3, { gain: 0.2, to: 45 });
+      } else if (type === 'crumble') {
+        for (let i = 0; i < 5; i++) noise(t + i * 0.05, 0.12, { freq: 900, gain: 0.15 });
+      } else if (type === 'fanfare') {
+        [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(t + 0.1 + i * 0.07, f, 0.35, { type: 'triangle', gain: 0.11 }));
+      } else if (type === 'blocked') {
+        tone(t, 160, 0.1, { type: 'square', gain: 0.05 });
+      } else if (type === 'gameover') {
+        [784, 659, 523, 392].forEach((f, i) => tone(t + i * 0.14, f, 0.3, { type: 'triangle', gain: 0.1 }));
+      }
+    }
+
+    // ===== おしまい =====
+    function showGameOver() {
+      over = true;
+      clearSave();
+      preview = null;
+      setHint('');
+      const msg = document.getElementById('message');
+      const record = score > best;
+      if (record) {
+        best = score;
+        try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {}
+      }
+      const top = Math.max(1, ...grid.flat(), topMade);
+      msg.classList.toggle('record', record && score > 0);
+      document.getElementById('finalScore').textContent = score.toLocaleString();
+      document.getElementById('resultTop').innerHTML = `${icon(top)}いちばん大きな建物：${LEVELS[top].name}`;
+      document.getElementById('resultTurns').textContent = turns;
+      document.getElementById('bestScore').textContent = best.toLocaleString();
+      render();
+      frameEl.classList.remove('danger');
+      msg.classList.add('show');
+      playSound('gameover');
+      if (record && score > 0) Arcade.shower(40);
+    }
+
+    // ===== ボタン =====
+    document.getElementById('backBtn').addEventListener('click', () => {
+      saveGame();
+      location.href = 'index.html';
+    });
+
+    document.getElementById('retireBtn').addEventListener('click', () => {
+      if (busy || over) return;
+      Arcade.showConfirm({
+        title: 'リタイアする？',
+        text: 'ここで終わりにして、今のスコアで結果を出します。',
+        okLabel: 'リタイア',
+        okColor: 'red',
+        onOk: showGameOver
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (busy) return;
+      Arcade.showConfirm({
+        title: 'はじめからにする？',
+        text: '今のスコアは記録されずに消えます。',
+        okLabel: 'はじめから',
+        okColor: 'blue',
+        onOk: initGame
+      });
+    });
+
+    document.getElementById('messageBtn').addEventListener('click', () => {
+      document.getElementById('message').classList.remove('show');
+      initGame();
+    });
+
+    const rulesModal = document.getElementById('rulesModal');
+    document.getElementById('helpBtn').addEventListener('click', () => rulesModal.classList.add('show'));
+    document.getElementById('closeRulesBtn').addEventListener('click', () => rulesModal.classList.remove('show'));
+    rulesModal.addEventListener('click', (e) => {
+      if (e.target === rulesModal) rulesModal.classList.remove('show');
+    });
+
+    // ===== 開始 =====
+    sizeFx();
+    window.addEventListener('resize', () => {
+      sizeFx();
+      if (preview) renderBoard();
+    });
+
+    if (!loadGame()) {
+      initGame();
+      // はじめて遊ぶ人にはルールを先に見せる
+      try {
+        if (!localStorage.getItem('skyVillageSeenRules')) {
+          rulesModal.classList.add('show');
+          localStorage.setItem('skyVillageSeenRules', '1');
+        }
+      } catch (e) {}
+    }
+
+    // 途中で閉じても続きから遊べるようにする（演出中でも盤面は確定済み）
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveGame();
+    });
+  </script>
+</body>
+</html>

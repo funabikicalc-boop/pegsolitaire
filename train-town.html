@@ -556,7 +556,8 @@
       canvas.height = Math.round(H * DPR);
       frontCanvas.width = canvas.width;
       frontCanvas.height = canvas.height;
-      s = Math.min(H / 640, W / 600);
+      // 横はいちばん長い電車（約1400）がまるごと入る広さを見せる（iPad で真ん中だけにならないように）
+      s = Math.min(H / 640, W / 1500);
       hy = H * 0.4;
       trackY = Math.round(H * 0.66);
       zT = (H - hy) / (trackY - hy);
@@ -1321,31 +1322,27 @@
         noise({ dur: 0.9, vol: 0.16, type: 'highpass', freq: 2500, q: 0.5, pan, attack: 0.02 });
       }
 
-      // おなら（毎回ちがう長さと高さ）
-      function fart(pan = 0) {
-        if (!ac) return;
-        const t = ac.currentTime;
-        const short = Math.random() < 0.35;
-        const dur = short ? 0.1 + Math.random() * 0.1 : 0.35 + Math.random() * 0.6;
-        const f = short ? 130 + Math.random() * 60 : 60 + Math.random() * 60;
+      // おならの1発（音の高さ・長さ・ふるえ・こもり具合を指定）
+      function blat(at, dur, f, { rate = 24, wob = 0.4, cut = 650, vol = 0.5, f2 = 0.75, buzz = 0.06, pan = 0 } = {}) {
+        const t = ac.currentTime + at;
         const o = ac.createOscillator();
         o.type = 'sawtooth';
         o.frequency.setValueAtTime(f * 1.25, t);
-        o.frequency.exponentialRampToValueAtTime(f * 0.75, t + dur);
+        o.frequency.exponentialRampToValueAtTime(f * f2, t + dur);
         const lfo = ac.createOscillator();
-        lfo.frequency.value = 16 + Math.random() * 22;
+        lfo.frequency.value = rate;
         const lfoG = ac.createGain();
-        lfoG.gain.value = f * 0.4;
+        lfoG.gain.value = f * wob;
         lfo.connect(lfoG);
         lfoG.connect(o.frequency);
         const lp = ac.createBiquadFilter();
         lp.type = 'lowpass';
-        lp.frequency.value = 650;
+        lp.frequency.value = cut;
         lp.Q.value = 5;
         const g = ac.createGain();
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.5, t + 0.015);
-        g.gain.setValueAtTime(0.45, t + dur * 0.8);
+        g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+        g.gain.setValueAtTime(vol * 0.9, t + dur * 0.8);
         g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.06);
         o.connect(lp);
         lp.connect(g);
@@ -1354,8 +1351,42 @@
         lfo.start(t);
         o.stop(t + dur + 0.1);
         lfo.stop(t + dur + 0.1);
-        noise({ dur, vol: 0.06, freq: 300, q: 1.5, pan });
-        return short;
+        if (buzz) noise({ at, dur, vol: buzz, freq: 300, q: 1.5, pan });
+      }
+
+      // おなら（種類をえらんで、毎回ちがう長さと高さ）。種類の名前を返す
+      const FARTS = [
+        ['short', 3], ['long', 3], ['rapid', 2], ['squeak', 2], ['big', 1.5], ['up', 1.5], ['fizzle', 1]
+      ];
+      function fart(pan = 0) {
+        if (!ac) return 'short';
+        let r = Math.random() * FARTS.reduce((n, [, w]) => n + w, 0);
+        const kind = FARTS.find(([, w]) => (r -= w) < 0)[0];
+        const rnd = (a, b) => a + Math.random() * (b - a);
+        if (kind === 'short') {
+          blat(0, rnd(0.1, 0.2), rnd(130, 190), { rate: rnd(16, 38), pan });
+        } else if (kind === 'long') {
+          blat(0, rnd(0.35, 0.95), rnd(60, 120), { rate: rnd(16, 38), pan });
+        } else if (kind === 'rapid') {
+          // ぶっ ぶっ ぶっ と小きざみ
+          const n = 3 + Math.floor(Math.random() * 3);
+          const f = rnd(90, 150);
+          for (let i = 0; i < n; i++) blat(i * rnd(0.11, 0.15), rnd(0.06, 0.09), f * (1 - i * 0.06), { rate: 30, vol: 0.42, pan });
+        } else if (kind === 'squeak') {
+          // ぴ〜っ と高くて細い
+          blat(0, rnd(0.3, 0.6), rnd(320, 460), { rate: rnd(40, 60), wob: 0.15, cut: 1600, vol: 0.28, f2: 0.85, buzz: 0.02, pan });
+        } else if (kind === 'big') {
+          // ぶぉぉっ と低くて大きい
+          blat(0, rnd(0.6, 1.1), rnd(42, 58), { rate: rnd(12, 18), wob: 0.5, cut: 420, vol: 0.6, buzz: 0.1, pan });
+        } else if (kind === 'up') {
+          // ぷぅ↑ と最後に上がる
+          blat(0, rnd(0.35, 0.55), rnd(80, 110), { rate: 26, f2: 2.2, pan });
+        } else {
+          // しゅ〜…ぷすっ と気がぬける
+          noise({ dur: 0.6, vol: 0.08, type: 'bandpass', freq: 900, q: 1.2, pan, attack: 0.1 });
+          blat(0.55, 0.08, rnd(140, 180), { rate: 30, vol: 0.35, buzz: 0, pan });
+        }
+        return kind;
       }
 
       function sparkle() {
@@ -2826,8 +2857,16 @@
     }
 
     function fartAt(x, y) {
-      const short = Snd.fart(panOf(x));
-      const words = short ? ['ぷっ！', 'ブッ！'] : ['ぷぅ〜', 'ブリッ！', 'プ〜〜！', 'ぶぉっ！'];
+      const WORDS = {
+        short: ['ぷっ！', 'ブッ！'],
+        long: ['ぷぅ〜', 'ブリッ！', 'プ〜〜！'],
+        rapid: ['ぶっぶっぶっ！', 'プププッ！'],
+        squeak: ['ぴ〜っ', 'ぷぴ〜♪'],
+        big: ['ぶぉぉぉっ！！', 'ドッカーン！'],
+        up: ['ぷぅ〜？', 'ぷ〜ぅ↑'],
+        fizzle: ['しゅ〜…ぷすっ', 'すかっ…']
+      };
+      const words = WORDS[Snd.fart(panOf(x))] || WORDS.short;
       popup(words[Math.floor(Math.random() * words.length)], x, y - 30 * s, '#ffe08a');
       puffs.push({ x, y, t: 0 });
     }

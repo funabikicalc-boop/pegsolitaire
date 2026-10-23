@@ -1351,42 +1351,30 @@
         lfo.start(t);
         o.stop(t + dur + 0.1);
         lfo.stop(t + dur + 0.1);
-        if (buzz) noise({ at, dur, vol: buzz, freq: 300, q: 1.5, pan });
+        if (buzz) noise({ at, dur: Math.min(dur, 1.5), vol: buzz, freq: 300, q: 1.5, pan });
       }
 
-      // おなら（種類をえらんで、毎回ちがう長さと高さ）。種類の名前を返す
-      const FARTS = [
-        ['short', 3], ['long', 3], ['rapid', 2], ['squeak', 2], ['big', 1.5], ['up', 1.5], ['fizzle', 1]
-      ];
+      // おなら：高さ（高い・ふつう・低い）× 長さ（短い・長い・すごく長い）。種類の名前を返す
+      const FART_PITCH = {
+        high: { f: [300, 440], rate: [40, 60], wob: 0.2, cut: 1600, vol: 0.3, buzz: 0.02 },
+        mid: { f: [90, 160], rate: [18, 36], wob: 0.4, cut: 650, vol: 0.5, buzz: 0.06 },
+        low: { f: [42, 60], rate: [11, 18], wob: 0.5, cut: 420, vol: 0.6, buzz: 0.1 }
+      };
+      const FART_LEN = { short: [0.1, 0.2, 4], long: [0.45, 0.9, 3], huge: [1.6, 2.6, 2] };
       function fart(pan = 0) {
-        if (!ac) return 'short';
-        let r = Math.random() * FARTS.reduce((n, [, w]) => n + w, 0);
-        const kind = FARTS.find(([, w]) => (r -= w) < 0)[0];
-        const rnd = (a, b) => a + Math.random() * (b - a);
-        if (kind === 'short') {
-          blat(0, rnd(0.1, 0.2), rnd(130, 190), { rate: rnd(16, 38), pan });
-        } else if (kind === 'long') {
-          blat(0, rnd(0.35, 0.95), rnd(60, 120), { rate: rnd(16, 38), pan });
-        } else if (kind === 'rapid') {
-          // ぶっ ぶっ ぶっ と小きざみ
-          const n = 3 + Math.floor(Math.random() * 3);
-          const f = rnd(90, 150);
-          for (let i = 0; i < n; i++) blat(i * rnd(0.11, 0.15), rnd(0.06, 0.09), f * (1 - i * 0.06), { rate: 30, vol: 0.42, pan });
-        } else if (kind === 'squeak') {
-          // ぴ〜っ と高くて細い
-          blat(0, rnd(0.3, 0.6), rnd(320, 460), { rate: rnd(40, 60), wob: 0.15, cut: 1600, vol: 0.28, f2: 0.85, buzz: 0.02, pan });
-        } else if (kind === 'big') {
-          // ぶぉぉっ と低くて大きい
-          blat(0, rnd(0.6, 1.1), rnd(42, 58), { rate: rnd(12, 18), wob: 0.5, cut: 420, vol: 0.6, buzz: 0.1, pan });
-        } else if (kind === 'up') {
-          // ぷぅ↑ と最後に上がる
-          blat(0, rnd(0.35, 0.55), rnd(80, 110), { rate: 26, f2: 2.2, pan });
-        } else {
-          // しゅ〜…ぷすっ と気がぬける
-          noise({ dur: 0.6, vol: 0.08, type: 'bandpass', freq: 900, q: 1.2, pan, attack: 0.1 });
-          blat(0.55, 0.08, rnd(140, 180), { rate: 30, vol: 0.35, buzz: 0, pan });
-        }
-        return kind;
+        if (!ac) return 'mid-short';
+        const rnd = ([a, b]) => a + Math.random() * (b - a);
+        const pitch = Object.keys(FART_PITCH)[Math.floor(Math.random() * 3)];
+        let r = Math.random() * 9;
+        const len = Object.keys(FART_LEN).find(k => (r -= FART_LEN[k][2]) < 0);
+        const P = FART_PITCH[pitch];
+        const dur = rnd(FART_LEN[len]);
+        blat(0, dur, rnd(P.f), {
+          rate: rnd(P.rate), wob: P.wob, cut: P.cut, vol: P.vol,
+          // すごく長いのは最後まで下がりきらず、ぶるぶる続く
+          f2: len === 'huge' ? 0.85 : 0.75, buzz: P.buzz, pan
+        });
+        return pitch + '-' + len;
       }
 
       function sparkle() {
@@ -2857,16 +2845,13 @@
     }
 
     function fartAt(x, y) {
+      const kind = Snd.fart(panOf(x)).split('-');
       const WORDS = {
-        short: ['ぷっ！', 'ブッ！'],
-        long: ['ぷぅ〜', 'ブリッ！', 'プ〜〜！'],
-        rapid: ['ぶっぶっぶっ！', 'プププッ！'],
-        squeak: ['ぴ〜っ', 'ぷぴ〜♪'],
-        big: ['ぶぉぉぉっ！！', 'ドッカーン！'],
-        up: ['ぷぅ〜？', 'ぷ〜ぅ↑'],
-        fizzle: ['しゅ〜…ぷすっ', 'すかっ…']
+        high: { short: ['ぴっ！', 'ぷぴっ！'], long: ['ぴ〜っ', 'ぷぴ〜♪'], huge: ['ぴぃ〜〜〜〜〜っ！', 'ぷぴぴぴ〜〜〜♪'] },
+        mid: { short: ['ぷっ！', 'ブッ！'], long: ['ぷぅ〜', 'プ〜〜！'], huge: ['ぷぅ〜〜〜〜〜〜！', 'ブリブリブリ〜〜！'] },
+        low: { short: ['ボッ！', 'ドッ！'], long: ['ぶぉぉっ！', 'ブォ〜ン！'], huge: ['ぶぉぉぉぉぉぉ〜〜っ！！', 'ドゥルルルル〜〜！'] }
       };
-      const words = WORDS[Snd.fart(panOf(x))] || WORDS.short;
+      const words = (WORDS[kind[0]] || WORDS.mid)[kind[1]] || WORDS.mid.short;
       popup(words[Math.floor(Math.random() * words.length)], x, y - 30 * s, '#ffe08a');
       puffs.push({ x, y, t: 0 });
     }
